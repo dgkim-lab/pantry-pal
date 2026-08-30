@@ -69,6 +69,6 @@ jobs:
             {
               "app": "${{ env.APP_NAME }}",
               "image": "${{ env.IMAGE_NAME }}",
-              "tag": "${{ steps.meta.outputs.version }}",
+              "tag": "sha-${{ github.sha }}",
               "environment": "${{ env.DEPLOY_ENVIRONMENT }}"
             }
