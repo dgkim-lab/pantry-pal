@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SiteFooter } from "@/app/components/site-footer";
 
 export const metadata: Metadata = {
   title: "Pantry Pal",
@@ -8,5 +9,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <SiteFooter />
+      </body>
+    </html>
+  );
 }
