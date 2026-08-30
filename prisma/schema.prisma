@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MemberRole {
+  OWNER  @map("owner")
+  EDITOR @map("editor")
+  VIEWER @map("viewer")
+  @@map("member_role")
+}
+
+enum StoreType {
+  LOCAL  @map("local")
+  ONLINE @map("online")
+  @@map("store_type")
+}
+
+enum ListItemStatus {
+  OPEN       @map("open")
+  IN_CART    @map("in_cart")
+  PURCHASED  @map("purchased")
+  CANCELLED  @map("cancelled")
+  @@map("list_item_status")
+}
+
+enum CartStatus {
+  ACTIVE       @map("active")
+  CHECKED_OUT  @map("checked_out")
+  CANCELLED   @map("cancelled")
+  @@map("cart_status")
+}
+
+model User {
+  id          String            @id @default(uuid()) @db.Uuid
+  oidcSubject String            @unique @map("oidc_subject")
+  email       String            @unique
+  name        String?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  memberships HouseholdMember[]
+  masterItems MasterItem[]
+  @@map("users")
+}
+
+model Household {
+  id        String            @id @default(uuid()) @db.Uuid
+  name      String
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  members   HouseholdMember[]
+  lists     ShoppingList[]
+  stores    Store[]
+  items     MasterItem[]
+  carts     Cart[]
+  purchases Purchase[]
+  @@map("households")
+}
+
+model HouseholdMember {
+  id          String     @id @default(uuid()) @db.Uuid
+  householdId String     @db.Uuid @map("household_id")
+  userId      String     @db.Uuid @map("user_id")
+  role        MemberRole @default(EDITOR)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([householdId, userId])
+  @@index([userId])
+  @@map("household_members")
+}
+
+model ShoppingList {
+  id          String            @id @default(uuid()) @db.Uuid
+  householdId String            @db.Uuid @map("household_id")
+  name        String
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  household   Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  items       ShoppingListItem[]
+  carts       Cart[]
+  @@index([householdId, updatedAt])
+  @@map("shopping_lists")
+}
+
+model Store {
+  id          String       @id @default(uuid()) @db.Uuid
+  householdId String       @db.Uuid @map("household_id")
+  name        String
+  type        StoreType    @default(LOCAL)
+  address     String?
+  url         String?
+  notes       String?
+  household   Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  preferredBy MasterItem[]
+  carts       Cart[]
+  purchases   Purchase[]
+  @@index([householdId, name])
+  @@map("stores")
+}
+
+model MasterItem {
+  id               String            @id @default(uuid()) @db.Uuid
+  householdId      String            @db.Uuid @map("household_id")
+  createdById       String            @db.Uuid @map("created_by_id")
+  name             String
+  normalizedName   String            @map("normalized_name")
+  category         String?
+  brand            String?
+  defaultQuantity  Decimal?          @db.Decimal(12, 3) @map("default_quantity")
+  defaultUnit      String?           @map("default_unit")
+  capacity         Decimal?          @db.Decimal(12, 3)
+  capacityUnit     String?           @map("capacity_unit")
+  defaultPrice     Decimal?          @db.Decimal(12, 2) @map("default_price")
+  currency         String            @default("KRW")
+  notes            String?
+  preferredStoreId String?           @db.Uuid @map("preferred_store_id")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  household        Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy        User              @relation(fields: [createdById], references: [id])
+  preferredStore   Store?            @relation(fields: [preferredStoreId], references: [id], onDelete: SetNull)
+  listItems        ShoppingListItem[]
+  cartItems        CartItem[]
+  purchaseItems    PurchaseItem[]
+  @@index([householdId, normalizedName])
+  @@map("master_items")
+}
+
+model ShoppingListItem {
+  id            String         @id @default(uuid()) @db.Uuid
+  listId        String         @db.Uuid @map("list_id")
+  masterItemId  String?        @db.Uuid @map("master_item_id")
+  name          String
+  brand         String?
+  quantity      Decimal?       @db.Decimal(12, 3)
+  unit          String?
+  capacity      Decimal?       @db.Decimal(12, 3)
+  capacityUnit  String?        @map("capacity_unit")
+  notes         String?
+  status        ListItemStatus @default(OPEN)
+  checkedAt     DateTime?      @map("checked_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  list          ShoppingList   @relation(fields: [listId], references: [id], onDelete: Cascade)
+  masterItem    MasterItem?    @relation(fields: [masterItemId], references: [id], onDelete: SetNull)
+  cartItems     CartItem[]
+  @@index([listId, status])
+  @@map("shopping_list_items")
+}
+
+model Cart {
+  id           String       @id @default(uuid()) @db.Uuid
+  householdId  String       @db.Uuid @map("household_id")
+  listId       String       @db.Uuid @map("list_id")
+  storeId      String?      @db.Uuid @map("store_id")
+  status       CartStatus   @default(ACTIVE)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  checkedOutAt DateTime?    @map("checked_out_at")
+  household    Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  list         ShoppingList @relation(fields: [listId], references: [id])
+  store        Store?       @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  items        CartItem[]
+  purchase     Purchase?
+  @@unique([listId, status])
+  @@index([householdId, status])
+  @@map("carts")
+}
+
+model CartItem {
+  id            String            @id @default(uuid()) @db.Uuid
+  cartId        String            @db.Uuid @map("cart_id")
+  listItemId    String?           @db.Uuid @map("list_item_id")
+  masterItemId  String?           @db.Uuid @map("master_item_id")
+  name          String
+  quantity      Decimal?          @db.Decimal(12, 3)
+  unit          String?
+  capacity      Decimal?          @db.Decimal(12, 3)
+  capacityUnit  String?           @map("capacity_unit")
+  expectedPrice Decimal?          @db.Decimal(12, 2) @map("expected_price")
+  currency      String            @default("KRW")
+  notes         String?
+  cart          Cart              @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  listItem      ShoppingListItem? @relation(fields: [listItemId], references: [id], onDelete: SetNull)
+  masterItem    MasterItem?       @relation(fields: [masterItemId], references: [id], onDelete: SetNull)
+  purchaseItem  PurchaseItem?
+  @@unique([cartId, listItemId])
+  @@map("cart_items")
+}
+
+model Purchase {
+  id          String         @id @default(uuid()) @db.Uuid
+  householdId String         @db.Uuid @map("household_id")
+  cartId      String         @unique @db.Uuid @map("cart_id")
+  storeId     String?        @db.Uuid @map("store_id")
+  purchasedAt DateTime       @default(now()) @map("purchased_at")
+  currency    String         @default("KRW")
+  totalPrice  Decimal?       @db.Decimal(12, 2) @map("total_price")
+  notes       String?
+  household   Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  cart        Cart           @relation(fields: [cartId], references: [id])
+  store       Store?         @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  items       PurchaseItem[]
+  @@index([householdId, purchasedAt])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id            String      @id @default(uuid()) @db.Uuid
+  purchaseId    String      @db.Uuid @map("purchase_id")
+  cartItemId    String      @unique @db.Uuid @map("cart_item_id")
+  masterItemId  String?     @db.Uuid @map("master_item_id")
+  name          String
+  quantity      Decimal?    @db.Decimal(12, 3)
+  unit          String?
+  capacity      Decimal?    @db.Decimal(12, 3)
+  capacityUnit  String?     @map("capacity_unit")
+  actualPrice   Decimal?    @db.Decimal(12, 2) @map("actual_price")
+  currency      String      @default("KRW")
+  notes         String?
+  purchase      Purchase    @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  cartItem      CartItem    @relation(fields: [cartItemId], references: [id])
+  masterItem    MasterItem? @relation(fields: [masterItemId], references: [id], onDelete: SetNull)
+  @@map("purchase_items")
+}

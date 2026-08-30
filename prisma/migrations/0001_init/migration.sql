@@ -1,0 +1,46 @@
+CREATE SCHEMA IF NOT EXISTS "public";
+CREATE TYPE "member_role" AS ENUM ('owner', 'editor', 'viewer');
+CREATE TYPE "store_type" AS ENUM ('local', 'online');
+CREATE TYPE "list_item_status" AS ENUM ('open', 'in_cart', 'purchased', 'cancelled');
+CREATE TYPE "cart_status" AS ENUM ('active', 'checked_out', 'cancelled');
+
+CREATE TABLE "users" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "oidc_subject" TEXT NOT NULL, "email" TEXT NOT NULL, "name" TEXT, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updated_at" TIMESTAMP(3) NOT NULL, CONSTRAINT "users_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "households" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "name" TEXT NOT NULL, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updated_at" TIMESTAMP(3) NOT NULL, CONSTRAINT "households_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "household_members" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "household_id" UUID NOT NULL, "user_id" UUID NOT NULL, "role" "member_role" NOT NULL DEFAULT 'editor', "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "household_members_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "shopping_lists" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "household_id" UUID NOT NULL, "name" TEXT NOT NULL, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updated_at" TIMESTAMP(3) NOT NULL, CONSTRAINT "shopping_lists_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "stores" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "household_id" UUID NOT NULL, "name" TEXT NOT NULL, "type" "store_type" NOT NULL DEFAULT 'local', "address" TEXT, "url" TEXT, "notes" TEXT, CONSTRAINT "stores_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "master_items" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "household_id" UUID NOT NULL, "created_by_id" UUID NOT NULL, "name" TEXT NOT NULL, "normalized_name" TEXT NOT NULL, "category" TEXT, "brand" TEXT, "default_quantity" DECIMAL(12,3), "default_unit" TEXT, "capacity" DECIMAL(12,3), "capacity_unit" TEXT, "default_price" DECIMAL(12,2), "currency" TEXT NOT NULL DEFAULT 'KRW', "notes" TEXT, "preferred_store_id" UUID, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updated_at" TIMESTAMP(3) NOT NULL, CONSTRAINT "master_items_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "shopping_list_items" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "list_id" UUID NOT NULL, "master_item_id" UUID, "name" TEXT NOT NULL, "brand" TEXT, "quantity" DECIMAL(12,3), "unit" TEXT, "capacity" DECIMAL(12,3), "capacity_unit" TEXT, "notes" TEXT, "status" "list_item_status" NOT NULL DEFAULT 'open', "checked_at" TIMESTAMP(3), "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updated_at" TIMESTAMP(3) NOT NULL, CONSTRAINT "shopping_list_items_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "carts" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "household_id" UUID NOT NULL, "list_id" UUID NOT NULL, "store_id" UUID, "status" "cart_status" NOT NULL DEFAULT 'active', "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "checked_out_at" TIMESTAMP(3), CONSTRAINT "carts_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "cart_items" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "cart_id" UUID NOT NULL, "list_item_id" UUID, "master_item_id" UUID, "name" TEXT NOT NULL, "quantity" DECIMAL(12,3), "unit" TEXT, "capacity" DECIMAL(12,3), "capacity_unit" TEXT, "expected_price" DECIMAL(12,2), "currency" TEXT NOT NULL DEFAULT 'KRW', "notes" TEXT, CONSTRAINT "cart_items_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "purchases" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "household_id" UUID NOT NULL, "cart_id" UUID NOT NULL, "store_id" UUID, "purchased_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "currency" TEXT NOT NULL DEFAULT 'KRW', "total_price" DECIMAL(12,2), "notes" TEXT, CONSTRAINT "purchases_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "purchase_items" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "purchase_id" UUID NOT NULL, "cart_item_id" UUID NOT NULL, "master_item_id" UUID, "name" TEXT NOT NULL, "quantity" DECIMAL(12,3), "unit" TEXT, "capacity" DECIMAL(12,3), "capacity_unit" TEXT, "actual_price" DECIMAL(12,2), "currency" TEXT NOT NULL DEFAULT 'KRW', "notes" TEXT, CONSTRAINT "purchase_items_pkey" PRIMARY KEY ("id"));
+
+CREATE UNIQUE INDEX "users_oidc_subject_key" ON "users"("oidc_subject"); CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+CREATE INDEX "household_members_user_id_idx" ON "household_members"("user_id"); CREATE UNIQUE INDEX "household_members_household_id_user_id_key" ON "household_members"("household_id", "user_id");
+CREATE INDEX "shopping_lists_household_id_updated_at_idx" ON "shopping_lists"("household_id", "updated_at"); CREATE INDEX "stores_household_id_name_idx" ON "stores"("household_id", "name");
+CREATE INDEX "master_items_household_id_normalized_name_idx" ON "master_items"("household_id", "normalized_name"); CREATE INDEX "shopping_list_items_list_id_status_idx" ON "shopping_list_items"("list_id", "status");
+CREATE INDEX "carts_household_id_status_idx" ON "carts"("household_id", "status"); CREATE UNIQUE INDEX "carts_list_id_status_key" ON "carts"("list_id", "status"); CREATE UNIQUE INDEX "cart_items_cart_id_list_item_id_key" ON "cart_items"("cart_id", "list_item_id");
+CREATE UNIQUE INDEX "purchases_cart_id_key" ON "purchases"("cart_id"); CREATE INDEX "purchases_household_id_purchased_at_idx" ON "purchases"("household_id", "purchased_at"); CREATE UNIQUE INDEX "purchase_items_cart_item_id_key" ON "purchase_items"("cart_item_id");
+
+ALTER TABLE "household_members" ADD CONSTRAINT "household_members_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "households"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "household_members" ADD CONSTRAINT "household_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "shopping_lists" ADD CONSTRAINT "shopping_lists_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "households"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "stores" ADD CONSTRAINT "stores_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "households"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "master_items" ADD CONSTRAINT "master_items_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "households"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "master_items" ADD CONSTRAINT "master_items_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "master_items" ADD CONSTRAINT "master_items_preferred_store_id_fkey" FOREIGN KEY ("preferred_store_id") REFERENCES "stores"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "shopping_list_items" ADD CONSTRAINT "shopping_list_items_list_id_fkey" FOREIGN KEY ("list_id") REFERENCES "shopping_lists"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "shopping_list_items" ADD CONSTRAINT "shopping_list_items_master_item_id_fkey" FOREIGN KEY ("master_item_id") REFERENCES "master_items"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "carts" ADD CONSTRAINT "carts_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "households"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "carts" ADD CONSTRAINT "carts_list_id_fkey" FOREIGN KEY ("list_id") REFERENCES "shopping_lists"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "carts" ADD CONSTRAINT "carts_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "stores"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_cart_id_fkey" FOREIGN KEY ("cart_id") REFERENCES "carts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_list_item_id_fkey" FOREIGN KEY ("list_item_id") REFERENCES "shopping_list_items"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_master_item_id_fkey" FOREIGN KEY ("master_item_id") REFERENCES "master_items"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "purchases" ADD CONSTRAINT "purchases_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "households"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "purchases" ADD CONSTRAINT "purchases_cart_id_fkey" FOREIGN KEY ("cart_id") REFERENCES "carts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "purchases" ADD CONSTRAINT "purchases_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "stores"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_cart_item_id_fkey" FOREIGN KEY ("cart_item_id") REFERENCES "cart_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_master_item_id_fkey" FOREIGN KEY ("master_item_id") REFERENCES "master_items"("id") ON DELETE SET NULL ON UPDATE CASCADE;
