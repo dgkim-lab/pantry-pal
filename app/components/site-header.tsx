@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SignOutButton } from "@/app/components/sign-out-button";
 
 export function SiteHeader({ name }: { name?: string | null }) {
   return (
@@ -13,6 +14,7 @@ export function SiteHeader({ name }: { name?: string | null }) {
         <Link href="/stores">Stores</Link>
         <Link href="/history">History</Link>
         <div className="user-chip">{name?.slice(0, 1) ?? "U"}</div>
+        <SignOutButton />
       </nav>
     </header>
   );

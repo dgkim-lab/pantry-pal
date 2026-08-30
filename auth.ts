@@ -18,7 +18,23 @@ const oidcProvider: OAuthConfig<Record<string, unknown>> = {
   issuer: process.env.OIDC_ISSUER_URL,
   clientId: process.env.OIDC_CLIENT_ID,
   clientSecret: process.env.OIDC_CLIENT_SECRET,
-  token: tokenUrl ? { url: tokenUrl } : undefined,
+  token: tokenUrl
+    ? {
+        url: tokenUrl,
+        // Cognito federation may return an ID token whose nonce was generated
+        // by the upstream provider. Use userinfo instead of validating that
+        // optional ID token in the generic OAuth flow.
+        async conform(response: Response) {
+          const body = (await response.json()) as Record<string, unknown>;
+          delete body.id_token;
+          return new Response(JSON.stringify(body), {
+            status: response.status,
+            statusText: response.statusText,
+            headers: { "content-type": "application/json" },
+          });
+        },
+      }
+    : undefined,
   // Cognito's user-pool discovery document may omit this endpoint.
   userinfo: userInfoUrl ? { url: userInfoUrl } : undefined,
   authorization: { params: { scope: process.env.OIDC_SCOPE ?? "openid profile email" } },

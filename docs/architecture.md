@@ -107,6 +107,18 @@ https://pantry.example.com/api/auth/callback/oidc
 
 When running behind a reverse proxy or FRP, set `AUTH_URL` to the public HTTPS URL and configure the proxy to forward `X-Forwarded-Proto: https` and `X-Forwarded-Host`.
 
+Auth.js logout clears the Pantry Pal session and redirects to `/signin`. For Cognito Hosted UI logout, add the public sign-in URL to the app client’s **Allowed sign-out URLs**, for example:
+
+```text
+https://pantry.example.com/signin
+```
+
+The application now redirects through Cognito’s logout endpoint using `COGNITO_DOMAIN`, `OIDC_CLIENT_ID`, and the same `logout_uri`:
+
+```text
+https://your-cognito-domain.auth.ap-northeast-2.amazoncognito.com/logout?client_id=YOUR_CLIENT_ID&logout_uri=https%3A%2F%2Fpantry.example.com%2Fsignin
+```
+
 ## Environment contract
 
 ```dotenv
