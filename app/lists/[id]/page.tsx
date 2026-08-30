@@ -41,7 +41,7 @@ function AttributeRows({
   return (
     <div className="attribute-list">
       {attributes.map((attribute) => (
-        <div className="attribute-row" key={attribute.attributeKey}>
+        <div className="editable-attribute-row" key={attribute.attributeKey}>
           <span className="attribute-name">{attribute.attributeKey}</span>
           <form action={cartItem ? saveCartItemAttribute : saveListItemAttribute}>
             <input type="hidden" name="listId" value={listId} />
@@ -57,13 +57,15 @@ function AttributeRows({
               <option>NUMBER</option>
               <option>BOOLEAN</option>
             </select>
-            <button className="secondary-button">Update</button>
-          </form>
-          <form action={cartItem ? deleteCartItemAttribute : deleteListItemAttribute}>
-            <input type="hidden" name="listId" value={listId} />
-            <input type="hidden" name={cartItem ? "cartItemId" : "itemId"} value={itemId} />
-            <input type="hidden" name="attributeKey" value={attribute.attributeKey} />
-            <button className="text-danger">Delete</button>
+            <div className="editable-attribute-actions">
+              <button className="secondary-button">Update</button>
+              <button
+                formAction={cartItem ? deleteCartItemAttribute : deleteListItemAttribute}
+                className="text-danger"
+              >
+                Delete
+              </button>
+            </div>
           </form>
         </div>
       ))}
@@ -160,7 +162,7 @@ export default async function ListDetailPage({
                 <details className="item-edit">
                   <summary>Edit attributes</summary>
                   <AttributeRows listId={id} itemId={item.id} attributes={item.attributes} />
-                  <form action={saveListItemAttribute} className="attribute-form">
+                  <form action={saveListItemAttribute} className="attribute-form custom-attribute-form">
                     <input type="hidden" name="listId" value={id} />
                     <input type="hidden" name="itemId" value={item.id} />
                     <input name="attributeKey" placeholder="Attribute" />
@@ -207,7 +209,7 @@ export default async function ListDetailPage({
                     <input name="expectedPrice" defaultValue={attr(item.attributes, "expectedPrice")} placeholder="Price" />
                     <button className="secondary-button">Save</button>
                   </form>
-                  <form action={saveCartItemAttribute} className="attribute-form">
+                  <form action={saveCartItemAttribute} className="attribute-form custom-attribute-form">
                     <input type="hidden" name="listId" value={id} />
                     <input type="hidden" name="cartItemId" value={item.id} />
                     <input name="attributeKey" placeholder="Attribute" />

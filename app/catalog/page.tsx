@@ -64,7 +64,7 @@ export default async function CatalogPage() {
               </form>
               <div className="attribute-list">
                 {item.attributes.map((attribute) => (
-                  <form action={saveMasterAttribute} key={attribute.id} className="attribute-row">
+                  <form action={saveMasterAttribute} key={attribute.id} className="editable-attribute-row">
                     <input type="hidden" name="masterItemId" value={item.id} />
                     <input type="hidden" name="attributeKey" value={attribute.attributeKey} />
                     <span className="attribute-name">{attribute.attributeKey}</span>
@@ -78,12 +78,14 @@ export default async function CatalogPage() {
                       <option>NUMBER</option>
                       <option>BOOLEAN</option>
                     </select>
-                    <button className="secondary-button">Update</button>
-                    <button formAction={deleteMasterAttribute} className="text-danger">Delete</button>
+                    <div className="editable-attribute-actions">
+                      <button className="secondary-button">Update</button>
+                      <button formAction={deleteMasterAttribute} className="text-danger">Delete</button>
+                    </div>
                   </form>
                 ))}
               </div>
-              <form action={saveMasterAttribute} className="attribute-form">
+              <form action={saveMasterAttribute} className="attribute-form custom-attribute-form">
                 <input type="hidden" name="masterItemId" value={item.id} />
                 <input name="attributeKey" placeholder="Custom attribute" />
                 <input name="value" placeholder="Value" />
