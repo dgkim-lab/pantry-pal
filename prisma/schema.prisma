@@ -170,7 +170,7 @@ model Cart {
   items        CartItem[]
   purchase     Purchase?
 
-  @@unique([listId, status])
+  @@index([listId, status])
   @@index([householdId, status])
   @@map("carts")
 }

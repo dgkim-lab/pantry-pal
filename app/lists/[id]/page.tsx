@@ -20,8 +20,13 @@ const attr = (items: readonly Attribute[], key: string) =>
 const lineTotal = (attributes: readonly Attribute[]) => {
   const actualValue = attr(attributes, "actualPrice");
   const actual = Number(actualValue);
-  const expected = Number(attr(attributes, "expectedPrice"));
-  const price = actualValue && Number.isFinite(actual) && actual >= 0 ? actual : expected;
+  const expectedValue = attr(attributes, "expectedPrice");
+  const expected = Number(expectedValue);
+  const price = actualValue && Number.isFinite(actual) && actual >= 0
+    ? actual
+    : expectedValue && Number.isFinite(expected) && expected >= 0
+      ? expected
+      : 0;
   const quantity = Number(attr(attributes, "quantity"));
   return (Number.isFinite(price) ? price : 0) *
     (Number.isFinite(quantity) && quantity > 0 ? quantity : 1);
@@ -243,6 +248,7 @@ export default async function ListDetailPage({
                   </select>
                   <input type="date" name="purchasedAt" defaultValue={new Date().toISOString().slice(0, 10)} />
                   <input
+                    key={total}
                     name="totalPrice"
                     type="number"
                     min="0"

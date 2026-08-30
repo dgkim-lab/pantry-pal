@@ -55,11 +55,8 @@ export async function checkListItem(formData: FormData) {
   if (membership.role === "VIEWER") throw new Error("Viewers cannot edit lists");
   const item = await prisma.shoppingListItem.findFirst({ where: { id: itemId, listId }, include: { attributes: true } });
   if (!item || item.status !== "OPEN") return;
-  const cart = await prisma.cart.upsert({
-    where: { listId_status: { listId, status: "ACTIVE" } },
-    update: {},
-    create: { listId, householdId: membership.householdId },
-  });
+  const cart = await prisma.cart.findFirst({ where: { listId, householdId: membership.householdId, status: "ACTIVE" } }) ??
+    await prisma.cart.create({ data: { listId, householdId: membership.householdId } });
   await prisma.$transaction([
     prisma.cartItem.create({ data: { cartId: cart.id, listItemId: item.id, masterItemId: item.masterItemId, name: item.name, attributes: { create: item.attributes.map((attribute) => ({ attributeKey: attribute.attributeKey, value: attribute.value, valueType: attribute.valueType })) } } }),
     prisma.shoppingListItem.update({ where: { id: item.id }, data: { status: "IN_CART", checkedAt: new Date() } }),
