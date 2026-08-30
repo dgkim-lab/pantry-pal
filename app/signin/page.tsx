@@ -1,5 +1,7 @@
 import { authProviderConfigured, signIn } from "@/auth";
 
+export const dynamic = "force-dynamic";
+
 export default function SignInPage() {
   return (
     <main className="auth-shell">
