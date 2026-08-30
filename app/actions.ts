@@ -86,3 +86,20 @@ export async function checkoutCart(formData: FormData) {
   });
   revalidatePath(`/lists/${listId}`);
 }
+
+export async function uncartItem(formData: FormData) {
+  const listId = String(formData.get("listId"));
+  const cartItemId = String(formData.get("cartItemId"));
+  const membership = await getMembership(listId);
+  if (membership.role === "VIEWER") throw new Error("Viewers cannot edit lists");
+  const cartItem = await prisma.cartItem.findFirst({
+    where: { id: cartItemId, cart: { listId, householdId: membership.householdId, status: "ACTIVE" } },
+    select: { id: true, listItemId: true },
+  });
+  if (!cartItem) return;
+  await prisma.$transaction([
+    prisma.cartItem.delete({ where: { id: cartItem.id } }),
+    ...(cartItem.listItemId ? [prisma.shoppingListItem.update({ where: { id: cartItem.listItemId }, data: { status: "OPEN", checkedAt: null } })] : []),
+  ]);
+  revalidatePath(`/lists/${listId}`);
+}

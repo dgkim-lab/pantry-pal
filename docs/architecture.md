@@ -78,6 +78,8 @@ Support both providers through standard OIDC settings rather than provider-speci
 OIDC_ISSUER_URL=https://identity.example.com/realms/pantry
 OIDC_CLIENT_ID=pantry-pal
 OIDC_CLIENT_SECRET=change-me
+OIDC_TOKEN_URL=https://your-cognito-domain.auth.ap-northeast-2.amazoncognito.com/oauth2/token
+OIDC_USERINFO_URL=https://your-cognito-domain.auth.ap-northeast-2.amazoncognito.com/oauth2/userInfo
 OIDC_SCOPE=openid profile email
 AUTH_SECRET=change-me
 APP_URL=https://pantry.example.com

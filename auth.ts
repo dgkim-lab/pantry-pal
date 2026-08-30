@@ -2,13 +2,25 @@ import NextAuth from "next-auth";
 import type { OAuthConfig } from "next-auth/providers";
 import { prisma } from "@/lib/prisma";
 
+const cognitoDomain = process.env.COGNITO_DOMAIN?.replace(/\/$/, "");
+const tokenUrl = process.env.OIDC_TOKEN_URL ?? (cognitoDomain ? `${cognitoDomain}/oauth2/token` : undefined);
+const userInfoUrl = process.env.OIDC_USERINFO_URL ?? (cognitoDomain ? `${cognitoDomain}/oauth2/userInfo` : undefined);
+export const authProviderConfigured = Boolean(process.env.OIDC_ISSUER_URL && process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET && tokenUrl && userInfoUrl);
+
 const oidcProvider: OAuthConfig<Record<string, unknown>> = {
   id: "oidc",
   name: "Continue with your account",
-  type: "oidc",
+  // Cognito can replace the nonce when it federates to another OIDC provider
+  // (for example Keycloak). Use OAuth2 userinfo plus state/PKCE validation so
+  // that Auth.js does not compare the upstream ID-token nonce.
+  type: "oauth",
+  checks: ["state", "pkce"],
   issuer: process.env.OIDC_ISSUER_URL,
   clientId: process.env.OIDC_CLIENT_ID,
   clientSecret: process.env.OIDC_CLIENT_SECRET,
+  token: tokenUrl ? { url: tokenUrl } : undefined,
+  // Cognito's user-pool discovery document may omit this endpoint.
+  userinfo: userInfoUrl ? { url: userInfoUrl } : undefined,
   authorization: { params: { scope: process.env.OIDC_SCOPE ?? "openid profile email" } },
   profile(profile) {
     return {
@@ -21,7 +33,7 @@ const oidcProvider: OAuthConfig<Record<string, unknown>> = {
 };
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: process.env.OIDC_ISSUER_URL ? [oidcProvider] : [],
+  providers: authProviderConfigured ? [oidcProvider] : [],
   pages: { signIn: "/signin" },
   callbacks: {
     async signIn({ user, profile }) {
