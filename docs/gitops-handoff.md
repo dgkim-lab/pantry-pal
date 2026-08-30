@@ -28,7 +28,8 @@ Required production values include:
 - `OIDC_ISSUER_URL`
 - `OIDC_CLIENT_ID`
 - `OIDC_CLIENT_SECRET`
-- `APP_URL`
+- `AUTH_URL`
+- `AUTH_TRUST_HOST`
 
 ## Deployment responsibilities
 
@@ -36,7 +37,7 @@ The GitOps repository should define:
 
 - Deployment, Service, and health probes for the Next.js runtime
 - A migration Job or release hook using the same image and migration command
-- Ingress/TLS and the public `APP_URL`
+- Ingress/TLS and the public `AUTH_URL`
 - Secret and ConfigMap references
 - Resource requests/limits and replica count
 - Image tag/digest promotion

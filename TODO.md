@@ -4,18 +4,19 @@ This backlog tracks work remaining after the initial list → cart vertical slic
 
 ## Priority 1 — Core product workflow
 
-- [ ] Add shopping-list rename, archive, and delete actions.
-- [ ] Add autocomplete suggestions while typing item names.
-- [ ] Add editable shopping-list item details: quantity, unit, capacity, brand, notes, and expected price.
-- [ ] Add a master-item catalog with create, edit, archive, and reuse actions.
-- [ ] Add cart-item editing for quantity, unit, capacity, notes, expected price, and store.
-- [ ] Add cart-item removal and restore behavior for all cart states.
-- [ ] Add store CRUD screens with local/online type, address, URL, and notes.
-- [ ] Add store selection to carts and purchases.
-- [ ] Add checkout form for actual price, quantity, capacity, purchase date, currency, and notes.
-- [ ] Calculate and display cart/purchase totals.
-- [ ] Add purchase-history screen with item, store, date, and price filters.
-- [ ] Add “buy again” from a purchase or master item to a selected shopping list.
+- [x] Add shopping-list rename and delete actions. Archive remains future work.
+- [x] Add autocomplete suggestions while typing item names.
+- [x] Add editable shopping-list item details: quantity, unit, capacity, brand, notes, and expected price.
+- [x] Add a master-item catalog with create, edit, and reuse actions. Archive remains future work.
+- [x] Add cart-item editing for quantity, unit, capacity, notes, expected price, and store.
+- [x] Add cart-item removal and restore behavior for active carts.
+- [x] Add store CRUD screens with local/online type, address, URL, and notes.
+- [x] Add store selection to carts and purchases.
+- [x] Add checkout form for actual price, quantity, capacity, purchase date, currency, and notes.
+- [x] Calculate and display cart/purchase totals.
+- [ ] Add purchase-history filters for item, store, date, and price. Basic history display is implemented.
+- [x] Add “buy again” from a purchase to a selected shopping list.
+- [ ] Add configurable default attributes for master items and apply them when creating shopping-list items.
 
 ## Priority 2 — Collaboration and account management
 

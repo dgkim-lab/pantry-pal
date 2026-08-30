@@ -37,8 +37,21 @@ The database uses plural `snake_case` table names and `snake_case` column names 
 
 - `Category`: household-scoped optional category name.
 - `Store`: household, name, type (`LOCAL` or `ONLINE`), optional address/URL/notes.
-- `MasterItem`: household, name, optional category/brand/preferred store, default quantity/unit, capacity/unit, default price/currency, notes.
-- `ShoppingListItem`: list, optional master item, copied name/brand/quantity/unit/capacity/unit/notes, status, checked-at, timestamps.
+- `MasterItem`: reusable household template with a name and a collection of customizable attributes.
+- `ShoppingListItem`: one planned occurrence on a list, with an optional link to its source master item, a copied name, copied attributes, status, and checked-at timestamp.
+
+User-defined attributes are stored separately rather than adding columns for every possible household-specific field:
+
+- `MasterItemAttribute`: reusable template attributes.
+- `ShoppingListItemAttribute`: list-item snapshot attributes.
+- `CartItemAttribute`: editable cart snapshot attributes.
+- `PurchaseItemAttribute`: immutable checkout snapshot attributes.
+
+Each attribute has a normalized key, string value, and declared type (`TEXT`, `NUMBER`, or `BOOLEAN`). The fixed fields currently retained on item tables (`name`, lifecycle status, and foreign-key relationships) are operational fields used frequently for filtering and authorization; custom item details belong in the attribute tables.
+
+### Master-item/list-item relation
+
+`MasterItem` to `ShoppingListItem` is a one-to-many, optional-source relationship. One master item can be added to many lists, while a list item may have no master item when created independently. Adding a master item copies its current attributes into the new list-item attribute rows. The list item is then an independent snapshot: editing the master does not rewrite existing list items, and deleting the master sets the list item’s `master_item_id` to `NULL` without deleting the snapshot.
 
 The copied fields are intentional denormalization: list planning and historical views remain stable when a master item is edited.
 
@@ -82,10 +95,17 @@ OIDC_TOKEN_URL=https://your-cognito-domain.auth.ap-northeast-2.amazoncognito.com
 OIDC_USERINFO_URL=https://your-cognito-domain.auth.ap-northeast-2.amazoncognito.com/oauth2/userInfo
 OIDC_SCOPE=openid profile email
 AUTH_SECRET=change-me
-APP_URL=https://pantry.example.com
+AUTH_URL=https://pantry.example.com
+AUTH_TRUST_HOST=true
 ```
 
-Keycloak can use a realm issuer URL. Cognito can use its user-pool issuer URL. The callback URL should be derived from `APP_URL` and documented for the selected provider.
+Keycloak can use a realm issuer URL. Cognito can use its user-pool issuer URL. Auth.js builds the callback URL from `AUTH_URL`; for this application it is:
+
+```text
+https://pantry.example.com/api/auth/callback/oidc
+```
+
+When running behind a reverse proxy or FRP, set `AUTH_URL` to the public HTTPS URL and configure the proxy to forward `X-Forwarded-Proto: https` and `X-Forwarded-Host`.
 
 ## Environment contract
 
@@ -97,7 +117,8 @@ OIDC_ISSUER_URL=
 OIDC_CLIENT_ID=
 OIDC_CLIENT_SECRET=
 OIDC_SCOPE=openid profile email
-APP_URL=http://localhost:3000
+AUTH_URL=http://localhost:3000
+AUTH_TRUST_HOST=true
 DEFAULT_LOCALE=en
 DEFAULT_TIMEZONE=Asia/Seoul
 DEFAULT_CURRENCY=KRW
