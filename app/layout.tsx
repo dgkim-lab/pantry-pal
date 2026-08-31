@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   title: "Pantry Pal",
   description: "A shared grocery list for real life.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
