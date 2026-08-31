@@ -9,6 +9,7 @@ The application is a single Next.js service:
 - Prisma as the PostgreSQL data-access layer
 - Generic OIDC login through an authentication adapter, configured by environment variables
 - PWA manifest and service worker for installability and static asset caching
+- OpenTelemetry server instrumentation with OTLP/HTTP trace export
 
 The browser must have network access for application reads and writes in the initial release.
 
@@ -137,3 +138,20 @@ DEFAULT_CURRENCY=KRW
 ```
 
 `.env` is local/private configuration and must not be committed. `.env.example` should contain names and safe placeholders only.
+
+## Observability
+
+The root `instrumentation.ts` initializes OpenTelemetry when the Next.js server
+starts. It exports Next.js request traces and Prisma query spans through
+OTLP/HTTP. The GitOps repository should inject the collector endpoint and
+resource metadata:
+
+```dotenv
+OTEL_SERVICE_NAME=pantry-pal
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,k8s.namespace.name=pantry
+```
+
+The endpoint should be the collector's OTLP/HTTP base URL. The exporter uses
+the standard `/v1/traces` path. If the collector is unavailable, application
+requests continue to work; telemetry export is asynchronous.

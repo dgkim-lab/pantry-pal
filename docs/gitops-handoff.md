@@ -31,6 +31,14 @@ Required production values include:
 - `AUTH_URL`
 - `AUTH_TRUST_HOST`
 
+For OpenTelemetry, inject these non-secret settings from the collector service
+configured by GitOps:
+
+- `OTEL_SERVICE_NAME=pantry-pal`
+- `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318`
+- `OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,k8s.namespace.name=pantry`
+- optionally `OTEL_TRACES_SAMPLER=parentbased_always_on`
+
 ## Deployment responsibilities
 
 The GitOps repository should define:
@@ -42,6 +50,9 @@ The GitOps repository should define:
 - Resource requests/limits and replica count
 - Image tag/digest promotion
 - PostgreSQL connectivity policy and backup ownership
+- OTLP collector connectivity and trace retention/access policy. Prisma query
+  spans may include SQL operation metadata, so apply the collector's normal
+  database-attribute redaction policy.
 
 ## Migration ordering
 
