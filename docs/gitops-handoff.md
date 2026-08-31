@@ -43,7 +43,9 @@ configured by GitOps:
 
 The GitOps repository should define:
 
-- Deployment, Service, and health probes for the Next.js runtime
+- Deployment, Service, and health probes for the Next.js runtime. Configure the
+  liveness/readiness HTTP probe path as `/api/healthz`; it returns HTTP 200 with
+  `{ "status": "ok" }` and does not require authentication.
 - A migration Job or release hook using the same image and migration command
 - Ingress/TLS and the public `AUTH_URL`
 - Secret and ConfigMap references
