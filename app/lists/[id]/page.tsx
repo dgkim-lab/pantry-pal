@@ -16,7 +16,7 @@ type Attribute = { attributeKey: string; value: string; valueType?: "TEXT" | "NU
 const aliases: Record<string, string[]> = {
   actualPrice: ["actual_price", "actualPrice", "actualprice"],
   expectedPrice: ["expected_price", "expectedPrice", "expectedprice"],
-  quantity: ["quantity", "defaultQuantity", "default_quantity"],
+  quantity: ["quantity", "defaultQuantity", "default_quantity", "defaultquantity"],
 };
 const attr = (items: readonly Attribute[], key: string) =>
   items.find((item) => (aliases[key] ?? [key]).includes(item.attributeKey))?.value ?? "";
@@ -244,7 +244,11 @@ export default async function ListDetailPage({
                   <Button variant="outlined" type="submit">Save</Button>
                   </form>
                   <hr className="item-edit-divider" />
-                  <form action={updateCartItem} className="attribute-form">
+                  <form
+                    key={`${item.id}-${attr(item.attributes, "quantity")}-${attr(item.attributes, "actualPrice")}`}
+                    action={updateCartItem}
+                    className="attribute-form"
+                  >
                     <input type="hidden" name="listId" value={id} />
                     <input type="hidden" name="cartItemId" value={item.id} />
                     <TextField

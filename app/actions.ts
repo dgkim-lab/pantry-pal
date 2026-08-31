@@ -130,7 +130,7 @@ async function replaceCartAttributes(cartItemId: string, attributes: ItemAttribu
 
 async function updateCartItemFields(cartItemId: string, formData: FormData) {
   const fields: Array<[string, string[], "TEXT" | "NUMBER" | "BOOLEAN"]> = [
-    ["quantity", ["quantity"], "NUMBER"],
+    ["quantity", ["quantity", "defaultQuantity", "default_quantity", "defaultquantity"], "NUMBER"],
     ["actualPrice", ["actualPrice", "actual_price", "actualprice"], "NUMBER"],
   ];
 
