@@ -12,7 +12,12 @@ export default async function ListsPage() {
 
   const lists = await prisma.shoppingList.findMany({
     where: { household: { members: { some: { userId: session.user.id } } } },
-    include: { _count: { select: { items: { where: { status: "OPEN" } } } } },
+    include: {
+      items: {
+        where: { status: { in: ["OPEN", "IN_CART"] } },
+        select: { status: true },
+      },
+    },
     orderBy: { updatedAt: "desc" },
   });
 
@@ -31,8 +36,13 @@ export default async function ListsPage() {
           </form>
         </div>
         <section className="list-grid">
-          {lists.map((list) => (
-            <Card component={Link} href={`/lists/${list.id}`} className="list-card" key={list.id} sx={{ textDecoration: "none" }}>
+          {lists.map((list) => {
+            const openItems = list.items.filter((item) => item.status === "OPEN").length;
+            const completedItems = list.items.length - openItems;
+            const progress = list.items.length ? (completedItems / list.items.length) * 100 : 0;
+
+            return (
+              <Card component={Link} href={`/lists/${list.id}`} className="list-card" key={list.id} sx={{ textDecoration: "none" }}>
               <CardContent>
                 <div className="list-card-top">
                   <span className="list-icon">✦</span>
@@ -40,12 +50,18 @@ export default async function ListsPage() {
                 </div>
                 <Typography variant="h2" sx={{ mt: 3, mb: .5, fontSize: 20 }}>{list.name}</Typography>
                 <Typography color="text.secondary" variant="body2" sx={{ mb: 2 }}>
-                {list._count.items} {list._count.items === 1 ? "item" : "items"} to get
+                {openItems} {openItems === 1 ? "item" : "items"} to get
                 </Typography>
-                <LinearProgress variant="determinate" value={list._count.items ? 20 : 0} color="secondary" />
+                <LinearProgress
+                  variant="determinate"
+                  value={progress}
+                  color="secondary"
+                  aria-label={`${completedItems} of ${list.items.length} items completed`}
+                />
               </CardContent>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
           {lists.length === 0 && (
             <div className="empty-state">
               <span>✦</span>

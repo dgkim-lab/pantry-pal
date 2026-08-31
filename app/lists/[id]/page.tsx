@@ -76,7 +76,13 @@ function AttributeRows({
             <input type="hidden" name="listId" value={listId} />
             <input type="hidden" name={cartItem ? "cartItemId" : "itemId"} value={itemId} />
             <input type="hidden" name="attributeKey" value={attribute.attributeKey} />
-            <TextField name="value" defaultValue={attribute.value} aria-label={attribute.attributeKey} />
+            <TextField
+              name="value"
+              defaultValue={attribute.value}
+              type={attribute.valueType === "NUMBER" ? "number" : undefined}
+              slotProps={attribute.valueType === "NUMBER" ? { htmlInput: { inputMode: "decimal" } } : undefined}
+              aria-label={attribute.attributeKey}
+            />
             <TextField
               select
               key={attribute.attributeKey + (attribute.valueType ?? "TEXT")}
@@ -115,6 +121,7 @@ export default async function ListDetailPage({
     where: { id, household: { members: { some: { userId: session.user.id } } } },
     include: {
       items: {
+        where: { status: { in: ["OPEN", "IN_CART"] } },
         include: { attributes: true },
         orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       },
@@ -137,13 +144,13 @@ export default async function ListDetailPage({
 
   return (
     <main className="app-shell">
-      <SiteHeader name={session.user.name} />
+      <SiteHeader name={session.user.name} listTitle={list.name} />
       <div className="detail-wrap">
         <Link href="/lists" className="back-link">← All lists</Link>
         <div className="detail-heading">
           <div>
             <p className="eyebrow">SHOPPING LIST</p>
-            <h1>{list.name}</h1>
+            <h1 id="shopping-list-heading">{list.name}</h1>
             <p className="muted">{openItems.length} things left to pick up</p>
           </div>
           <div className="list-stats">
@@ -240,8 +247,22 @@ export default async function ListDetailPage({
                   <form action={updateCartItem} className="attribute-form">
                     <input type="hidden" name="listId" value={id} />
                     <input type="hidden" name="cartItemId" value={item.id} />
-                    <TextField name="quantity" defaultValue={attr(item.attributes, "quantity")} placeholder="Quantity" label="Quantity" />
-                    <TextField name="actualPrice" defaultValue={attr(item.attributes, "actualPrice")} placeholder="Price" label="Actual price" />
+                    <TextField
+                      name="quantity"
+                      type="number"
+                      defaultValue={attr(item.attributes, "quantity")}
+                      placeholder="Quantity"
+                      label="Quantity"
+                      slotProps={{ htmlInput: { inputMode: "decimal", min: 0, step: 0.01 } }}
+                    />
+                    <TextField
+                      name="actualPrice"
+                      type="number"
+                      defaultValue={attr(item.attributes, "actualPrice")}
+                      placeholder="Price"
+                      label="Actual price"
+                      slotProps={{ htmlInput: { inputMode: "decimal", min: 0, step: 0.01 } }}
+                    />
                     <Button variant="outlined" type="submit">Save</Button>
                   </form>
                 </details>
@@ -270,7 +291,7 @@ export default async function ListDetailPage({
                     label="Total price"
                     defaultValue={total > 0 ? total.toString() : ""}
                     placeholder="Total price"
-                    slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                    slotProps={{ htmlInput: { inputMode: "decimal", min: 0, step: 0.01 } }}
                   />
                   <TextField name="notes" placeholder="Notes" label="Notes" multiline minRows={2} />
                   <Button

@@ -69,7 +69,13 @@ export default async function CatalogPage() {
                     <input type="hidden" name="masterItemId" value={item.id} />
                     <input type="hidden" name="attributeKey" value={attribute.attributeKey} />
                     <span className="attribute-name">{attribute.attributeKey}</span>
-                    <TextField name="value" defaultValue={attribute.value} aria-label={attribute.attributeKey} />
+                    <TextField
+                      name="value"
+                      defaultValue={attribute.value}
+                      type={attribute.valueType === "NUMBER" ? "number" : undefined}
+                      slotProps={attribute.valueType === "NUMBER" ? { htmlInput: { inputMode: "decimal" } } : undefined}
+                      aria-label={attribute.attributeKey}
+                    />
                     <TextField
                       select
                       key={attribute.attributeKey + attribute.valueType}
