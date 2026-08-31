@@ -39,6 +39,7 @@ This backlog tracks work remaining after the initial list → cart vertical slic
 
 ## Priority 4 — Reliability and security
 
+- [ ] Remove the temporary “Test client error” navigation button after verifying client exception telemetry.
 - [ ] Add schema/input validation with user-facing validation errors.
 - [ ] Add automated tests for list access and role authorization.
 - [ ] Add integration tests for add → cart → uncart → checkout.

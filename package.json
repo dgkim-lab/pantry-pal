@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:otel": "./start-dev-with-otel.sh",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

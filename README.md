@@ -51,3 +51,19 @@ docker compose -f docker-compose.postgres.yml down
 To remove the local database volume as well, run `docker compose -f docker-compose.postgres.yml down -v`.
 
 The application requires authentication before any shopping-list or purchase data can be accessed. Offline editing is out of scope for the initial release.
+
+## Local development with Kubernetes OpenTelemetry
+
+To send local server and client error telemetry to the Collector running in Kubernetes:
+
+```bash
+npm run dev:otel
+```
+
+The helper forwards the `otel-collector` Service in the `pantry` namespace from local port `4318`, sets `OTEL_EXPORTER_OTLP_ENDPOINT` to `http://127.0.0.1:4318`, and starts Next.js. The port-forward is stopped automatically when development ends.
+
+Override the Kubernetes target when needed:
+
+```bash
+OTEL_NAMESPACE=observability OTEL_SERVICE=otel-collector npm run dev:otel
+```

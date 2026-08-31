@@ -14,6 +14,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { RefreshButton } from "@/app/components/refresh-button";
+import { ClientErrorTestButton } from "@/app/components/client-error-test-button";
 
 const links = [
   ["Lists", "/lists"],
@@ -50,6 +51,7 @@ export function MobileNavigation() {
           </List>
           <Divider />
           <Stack sx={{ p: 2 }}>
+            <ClientErrorTestButton />
             <RefreshButton />
             <SignOutButton />
           </Stack>

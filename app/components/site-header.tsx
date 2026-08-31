@@ -5,6 +5,7 @@ import { AppBar, Avatar, Box, Button, Stack, Toolbar, Typography } from "@mui/ma
 import { MobileNavigation } from "@/app/components/mobile-navigation";
 import { RefreshButton } from "@/app/components/refresh-button";
 import { SignOutButton } from "@/app/components/sign-out-button";
+import { ClientErrorTestButton } from "@/app/components/client-error-test-button";
 
 export function SiteHeader({ name, listTitle }: { name?: string | null; listTitle?: string }) {
   const [showListTitle, setShowListTitle] = useState(false);
@@ -44,6 +45,7 @@ export function SiteHeader({ name, listTitle }: { name?: string | null; listTitl
           <Button href="/catalog" color="inherit" size="small">Catalog</Button>
           <Button href="/stores" color="inherit" size="small">Stores</Button>
           <Button href="/history" color="inherit" size="small">History</Button>
+          <ClientErrorTestButton />
         </Stack>
         <Box sx={{ display: { xs: "none", sm: "block" } }}>
           <RefreshButton />
