@@ -2,6 +2,20 @@
 
 Pantry Pal is an online-first, installable grocery and pantry companion for mobile and desktop web. It lets authenticated users share shopping lists, reuse master items, track cart contents, and keep purchase history for future reference.
 
+## Screenshots
+
+### Shopping lists
+
+![Shopping lists view](images/image1.png)
+
+### Shopping list items
+
+![Shopping list detail view](images/image2.png)
+
+### Active cart
+
+![Active cart view](images/image3.png)
+
 ## Product documents
 
 - [Product requirements](docs/product-requirements.md)
