@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button, MenuItem, TextField } from "@mui/material";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -11,7 +12,7 @@ const fields = (item?: {
 }) => (
   <>
     {item && <input type="hidden" name="masterItemId" value={item.id} />}
-    <input name="name" defaultValue={item?.name} placeholder="Name" required />
+    <TextField name="name" defaultValue={item?.name} placeholder="Name" label="Name" required />
   </>
 );
 
@@ -44,7 +45,7 @@ export default async function CatalogPage() {
           <summary>＋ Add master item</summary>
           <form action={saveMasterItem} className="field-grid wide-fields">
             {fields()}
-            <button className="primary-button">Create item</button>
+            <Button variant="contained" type="submit">Create item</Button>
           </form>
         </details>
         <section className="catalog-list">
@@ -56,11 +57,11 @@ export default async function CatalogPage() {
               </summary>
               <form action={saveMasterItem} className="field-grid wide-fields">
                 {fields(item)}
-                <button className="secondary-button">Save changes</button>
+                <Button variant="outlined" type="submit">Save changes</Button>
               </form>
               <form action={deleteMasterItem}>
                 <input type="hidden" name="masterItemId" value={item.id} />
-                <button className="text-danger">Delete item</button>
+                <Button color="error" type="submit">Delete item</Button>
               </form>
               <div className="attribute-list">
                 {item.attributes.map((attribute) => (
@@ -68,33 +69,35 @@ export default async function CatalogPage() {
                     <input type="hidden" name="masterItemId" value={item.id} />
                     <input type="hidden" name="attributeKey" value={attribute.attributeKey} />
                     <span className="attribute-name">{attribute.attributeKey}</span>
-                    <input name="value" defaultValue={attribute.value} aria-label={attribute.attributeKey} />
-                    <select
+                    <TextField name="value" defaultValue={attribute.value} aria-label={attribute.attributeKey} />
+                    <TextField
+                      select
                       key={attribute.attributeKey + attribute.valueType}
                       name="valueType"
+                      label="Type"
                       defaultValue={String(attribute.valueType).toUpperCase()}
                     >
-                      <option>TEXT</option>
-                      <option>NUMBER</option>
-                      <option>BOOLEAN</option>
-                    </select>
+                      <MenuItem value="TEXT">TEXT</MenuItem>
+                      <MenuItem value="NUMBER">NUMBER</MenuItem>
+                      <MenuItem value="BOOLEAN">BOOLEAN</MenuItem>
+                    </TextField>
                     <div className="editable-attribute-actions">
-                      <button className="secondary-button">Update</button>
-                      <button formAction={deleteMasterAttribute} className="text-danger">Delete</button>
+                      <Button variant="outlined" type="submit">Update</Button>
+                      <Button formAction={deleteMasterAttribute} color="error" type="submit">Delete</Button>
                     </div>
                   </form>
                 ))}
               </div>
               <form action={saveMasterAttribute} className="attribute-form custom-attribute-form">
                 <input type="hidden" name="masterItemId" value={item.id} />
-                <input name="attributeKey" placeholder="Custom attribute" />
-                <input name="value" placeholder="Value" />
-                <select name="valueType">
-                  <option>TEXT</option>
-                  <option>NUMBER</option>
-                  <option>BOOLEAN</option>
-                </select>
-                <button className="secondary-button">Save attribute</button>
+                <TextField name="attributeKey" placeholder="Custom attribute" label="Attribute" />
+                <TextField name="value" placeholder="Value" label="Value" />
+                <TextField select name="valueType" label="Type" defaultValue="TEXT">
+                  <MenuItem value="TEXT">TEXT</MenuItem>
+                  <MenuItem value="NUMBER">NUMBER</MenuItem>
+                  <MenuItem value="BOOLEAN">BOOLEAN</MenuItem>
+                </TextField>
+                <Button variant="outlined" type="submit">Save attribute</Button>
               </form>
             </details>
           ))}

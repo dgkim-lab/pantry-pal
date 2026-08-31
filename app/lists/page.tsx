@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button, Card, CardContent, LinearProgress, TextField, Typography } from "@mui/material";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -25,25 +26,25 @@ export default async function ListsPage() {
             <h1>Shopping lists</h1>
           </div>
           <form action={createList} className="inline-form">
-            <input name="name" placeholder="New list name" aria-label="New list name" />
-            <button className="primary-button" type="submit">+ New list</button>
+            <TextField name="name" placeholder="New list name" aria-label="New list name" />
+            <Button variant="contained" type="submit">+ New list</Button>
           </form>
         </div>
         <section className="list-grid">
           {lists.map((list) => (
-            <Link href={`/lists/${list.id}`} className="list-card" key={list.id}>
-              <div className="list-card-top">
-                <span className="list-icon">✦</span>
-                <span className="arrow">↗</span>
-              </div>
-              <h2>{list.name}</h2>
-              <p>
+            <Card component={Link} href={`/lists/${list.id}`} className="list-card" key={list.id} sx={{ textDecoration: "none" }}>
+              <CardContent>
+                <div className="list-card-top">
+                  <span className="list-icon">✦</span>
+                  <span className="arrow">↗</span>
+                </div>
+                <Typography variant="h2" sx={{ mt: 3, mb: .5, fontSize: 20 }}>{list.name}</Typography>
+                <Typography color="text.secondary" variant="body2" sx={{ mb: 2 }}>
                 {list._count.items} {list._count.items === 1 ? "item" : "items"} to get
-              </p>
-              <div className="progress">
-                <span style={{ width: `${list._count.items ? 20 : 0}%` }} />
-              </div>
-            </Link>
+                </Typography>
+                <LinearProgress variant="determinate" value={list._count.items ? 20 : 0} color="secondary" />
+              </CardContent>
+            </Card>
           ))}
           {lists.length === 0 && (
             <div className="empty-state">

@@ -32,7 +32,7 @@ The database uses plural `snake_case` table names and `snake_case` column names 
 - `User`: internal ID, OIDC subject, email, display name, timestamps.
 - `Household`: name, owner, timestamps.
 - `HouseholdMember`: household, user, role, invited/accepted timestamps; unique on household and user.
-- `ShoppingList`: household, name, status, timestamps.
+- `ShoppingList`: household, name, optional default store, timestamps.
 
 ### Catalog and planning
 
@@ -58,7 +58,7 @@ The copied fields are intentional denormalization: list planning and historical 
 
 ### Cart and history
 
-- `Cart`: household, source shopping list, status (`ACTIVE`, `CHECKED_OUT`, `CANCELLED`), store, timestamps.
+- `Cart`: household, source shopping list, status (`ACTIVE`, `CHECKED_OUT`, `CANCELLED`), inherited or overridden store, timestamps.
 - `CartItem`: cart, optional source list item/master item, copied editable item fields, expected/actual price, quantity, capacity, notes.
 - `Purchase`: household, source cart, store, purchased-at, currency, total price if supplied, notes.
 - `PurchaseItem`: purchase, optional master item, immutable snapshot of name/brand/quantity/unit/capacity/unit/actual price/currency, notes.

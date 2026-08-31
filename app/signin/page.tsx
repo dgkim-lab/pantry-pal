@@ -1,17 +1,18 @@
 import { authProviderConfigured, signIn } from "@/auth";
+import { Button, Paper, Typography } from "@mui/material";
 
 export const dynamic = "force-dynamic";
 
 export default function SignInPage() {
   return (
     <main className="auth-shell">
-      <div className="auth-card">
+      <Paper className="auth-card" elevation={0} sx={{ bgcolor: "transparent" }}>
         <div className="brand-mark">PP</div>
         <p className="eyebrow">PANTRY PAL</p>
-        <h1>
+        <Typography component="h1" variant="h1">
           Shop together.<br />
           <em>Remember everything.</em>
-        </h1>
+        </Typography>
         <p className="muted">
           Your shared grocery companion for the market, the pantry, and everywhere in between.
         </p>
@@ -20,9 +21,9 @@ export default function SignInPage() {
             "use server";
             await signIn("oidc", { redirectTo: "/lists" });
           }}>
-            <button className="primary-button full" type="submit">
+            <Button className="full" variant="contained" size="large" type="submit">
               Continue with your account <span>→</span>
-            </button>
+            </Button>
           </form>
         ) : (
           <div className="notice">
@@ -31,7 +32,7 @@ export default function SignInPage() {
           </div>
         )}
         <p className="fine-print">Private by default · Shared with your household</p>
-      </div>
+      </Paper>
     </main>
   );
 }

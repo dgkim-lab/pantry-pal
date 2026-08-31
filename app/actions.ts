@@ -53,14 +53,17 @@ export async function checkListItem(formData: FormData) {
   const itemId = String(formData.get("itemId"));
   const membership = await getMembership(listId);
   if (membership.role === "VIEWER") throw new Error("Viewers cannot edit lists");
-  const item = await prisma.shoppingListItem.findFirst({ where: { id: itemId, listId }, include: { attributes: true } });
+  const item = await prisma.shoppingListItem.findFirst({ where: { id: itemId, listId }, include: { attributes: true, list: { select: { defaultStoreId: true } } } });
   if (!item || item.status !== "OPEN") return;
   const cart = await prisma.cart.findFirst({ where: { listId, householdId: membership.householdId, status: "ACTIVE" } }) ??
-    await prisma.cart.create({ data: { listId, householdId: membership.householdId } });
-  await prisma.$transaction([
-    prisma.cartItem.create({ data: { cartId: cart.id, listItemId: item.id, masterItemId: item.masterItemId, name: item.name, attributes: { create: item.attributes.map((attribute) => ({ attributeKey: attribute.attributeKey, value: attribute.value, valueType: attribute.valueType })) } } }),
-    prisma.shoppingListItem.update({ where: { id: item.id }, data: { status: "IN_CART", checkedAt: new Date() } }),
-  ]);
+    await prisma.cart.create({ data: { listId, householdId: membership.householdId, storeId: item.list.defaultStoreId } });
+  await prisma.$transaction(async (tx) => {
+    if (!cart.storeId && item.list.defaultStoreId) {
+      await tx.cart.update({ where: { id: cart.id }, data: { storeId: item.list.defaultStoreId } });
+    }
+    await tx.cartItem.create({ data: { cartId: cart.id, listItemId: item.id, masterItemId: item.masterItemId, name: item.name, attributes: { create: item.attributes.map((attribute) => ({ attributeKey: attribute.attributeKey, value: attribute.value, valueType: attribute.valueType })) } } });
+    await tx.shoppingListItem.update({ where: { id: item.id }, data: { status: "IN_CART", checkedAt: new Date() } });
+  });
   revalidatePath(`/lists/${listId}`);
 }
 
@@ -83,13 +86,16 @@ export async function uncartItem(formData: FormData) {
   if (membership.role === "VIEWER") throw new Error("Viewers cannot edit lists");
   const cartItem = await prisma.cartItem.findFirst({
     where: { id: cartItemId, cart: { listId, householdId: membership.householdId, status: "ACTIVE" } },
-    select: { id: true, listItemId: true },
+    select: { id: true, listItemId: true, cartId: true },
   });
   if (!cartItem) return;
-  await prisma.$transaction([
-    prisma.cartItem.delete({ where: { id: cartItem.id } }),
-    ...(cartItem.listItemId ? [prisma.shoppingListItem.update({ where: { id: cartItem.listItemId }, data: { status: "OPEN", checkedAt: null } })] : []),
-  ]);
+  await prisma.$transaction(async (tx) => {
+    await tx.cartItem.delete({ where: { id: cartItem.id } });
+    if (cartItem.listItemId) {
+      await tx.shoppingListItem.update({ where: { id: cartItem.listItemId }, data: { status: "OPEN", checkedAt: null } });
+    }
+    await tx.cart.deleteMany({ where: { id: cartItem.cartId, status: "ACTIVE", items: { none: {} } } });
+  });
   revalidatePath(`/lists/${listId}`);
 }
 
@@ -120,6 +126,21 @@ async function replaceListAttributes(shoppingListItemId: string, attributes: Ite
 async function replaceCartAttributes(cartItemId: string, attributes: ItemAttribute[]) {
   await prisma.cartItemAttribute.deleteMany({ where: { cartItemId } });
   if (attributes.length) await prisma.cartItemAttribute.createMany({ data: attributes.map((attribute) => ({ cartItemId, ...attribute })) });
+}
+
+async function updateCartItemFields(cartItemId: string, formData: FormData) {
+  const fields: Array<[string, string[], "TEXT" | "NUMBER" | "BOOLEAN"]> = [
+    ["quantity", ["quantity"], "NUMBER"],
+    ["actualPrice", ["actualPrice", "actual_price", "actualprice"], "NUMBER"],
+  ];
+
+  for (const [field, aliases, valueType] of fields) {
+    const value = String(formData.get(field) ?? "").trim();
+    await prisma.cartItemAttribute.deleteMany({ where: { cartItemId, attributeKey: { in: aliases } } });
+    if (value) {
+      await prisma.cartItemAttribute.create({ data: { cartItemId, attributeKey: field, value, valueType } });
+    }
+  }
 }
 
 export async function saveMasterAttribute(formData: FormData) {
@@ -206,9 +227,22 @@ async function getHouseholdMembership() {
 export async function updateList(formData: FormData) {
   const listId = String(formData.get("listId"));
   const name = String(formData.get("name") ?? "").trim();
+  const defaultStoreId = optionalValue(formData, "defaultStoreId");
   const membership = await getMembership(listId);
   if (membership.role === "VIEWER" || !name) throw new Error("You cannot update this list");
-  await prisma.shoppingList.update({ where: { id: listId }, data: { name } });
+  if (defaultStoreId) {
+    const store = await prisma.store.findFirst({ where: { id: defaultStoreId, householdId: membership.householdId } });
+    if (!store) throw new Error("Invalid default store");
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.shoppingList.update({ where: { id: listId }, data: { name, defaultStoreId } });
+    if (defaultStoreId) {
+      await tx.cart.updateMany({
+        where: { listId, householdId: membership.householdId, status: "ACTIVE", storeId: null },
+        data: { storeId: defaultStoreId },
+      });
+    }
+  });
   revalidatePath("/lists");
   revalidatePath(`/lists/${listId}`);
 }
@@ -250,7 +284,7 @@ export async function updateCartItem(formData: FormData) {
   if (membership.role === "VIEWER") throw new Error("Viewers cannot edit carts");
   const item = await prisma.cartItem.findFirst({ where: { id: cartItemId, cart: { listId, householdId: membership.householdId, status: "ACTIVE" } } });
   if (!item) return;
-  await replaceCartAttributes(cartItemId, formItemAttributes(formData));
+  await updateCartItemFields(cartItemId, formData);
   revalidatePath(`/lists/${listId}`);
 }
 
@@ -324,7 +358,7 @@ export async function checkoutCart(formData: FormData) {
   if (!cart || cart.items.length === 0) return;
   const purchasedAt = new Date(String(formData.get("purchasedAt") || new Date().toISOString()));
   await prisma.$transaction(async (tx) => {
-    const purchase = await tx.purchase.create({ data: { householdId: membership.householdId, cartId: cart.id, storeId: optionalValue(formData, "storeId"), purchasedAt: Number.isNaN(purchasedAt.getTime()) ? new Date() : purchasedAt, currency: String(formData.get("currency") || process.env.DEFAULT_CURRENCY || "KRW"), totalPrice: optionalValue(formData, "totalPrice"), notes: optionalValue(formData, "notes") } });
+    const purchase = await tx.purchase.create({ data: { householdId: membership.householdId, cartId: cart.id, storeId: optionalValue(formData, "storeId") || cart.storeId, purchasedAt: Number.isNaN(purchasedAt.getTime()) ? new Date() : purchasedAt, currency: String(formData.get("currency") || process.env.DEFAULT_CURRENCY || "KRW"), totalPrice: optionalValue(formData, "totalPrice"), notes: optionalValue(formData, "notes") } });
     for (const item of cart.items) {
       const purchaseItem = await tx.purchaseItem.create({ data: { purchaseId: purchase.id, cartItemId: item.id, masterItemId: item.masterItemId, name: item.name } });
       const attributes = purchaseAttributes(item.attributes);

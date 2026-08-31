@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SiteFooter } from "@/app/components/site-footer";
+import { MuiThemeProvider } from "@/app/components/mui-theme-provider";
 
 export const metadata: Metadata = {
   title: "Pantry Pal",
@@ -12,8 +13,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
-        {children}
-        <SiteFooter />
+        <MuiThemeProvider>
+          {children}
+          <SiteFooter />
+        </MuiThemeProvider>
       </body>
     </html>
   );

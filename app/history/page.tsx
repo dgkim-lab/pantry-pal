@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Button, MenuItem, TextField } from "@mui/material";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { buyAgain } from "@/app/actions";
@@ -82,16 +83,16 @@ export default async function HistoryPage() {
                       <input type="hidden" name="purchaseItemId" value={item.id} />
                       <label className="buy-again-label">
                         Add to
-                        <select name="listId" defaultValue={lists[0]?.id}>
-                          <option value="">list…</option>
+                        <TextField select name="listId" defaultValue={lists[0]?.id ?? ""} label="Add to" size="small">
+                          <MenuItem value="">list…</MenuItem>
                           {lists.map((list) => (
-                            <option key={list.id} value={list.id}>
+                            <MenuItem key={list.id} value={list.id}>
                               {list.name}
-                            </option>
+                            </MenuItem>
                           ))}
-                        </select>
+                        </TextField>
                       </label>
-                      <button className="uncart-button">Buy again</button>
+                      <Button variant="outlined" size="small" type="submit">Buy again</Button>
                     </form>
                   </div>
                 ))}

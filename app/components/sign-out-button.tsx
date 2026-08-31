@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import { Button } from "@mui/material";
 
 export function SignOutButton() {
   async function handleSignOut() {
@@ -11,8 +12,8 @@ export function SignOutButton() {
   }
 
   return (
-    <button className="sign-out-button" type="button" onClick={handleSignOut}>
+    <Button color="inherit" size="small" type="button" onClick={handleSignOut}>
       Sign out
-    </button>
+    </Button>
   );
 }

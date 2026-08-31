@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button, MenuItem, TextField } from "@mui/material";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -8,6 +9,8 @@ import {
   uncartItem, updateCartItem, updateList,
 } from "@/app/actions";
 import { SiteHeader } from "@/app/components/site-header";
+import { ItemCheckButton } from "@/app/components/item-check-button";
+import { QuickAdd } from "@/app/components/quick-add";
 
 type Attribute = { attributeKey: string; value: string; valueType?: "TEXT" | "NUMBER" | "BOOLEAN" };
 const aliases: Record<string, string[]> = {
@@ -32,6 +35,27 @@ const lineTotal = (attributes: readonly Attribute[]) => {
     (Number.isFinite(quantity) && quantity > 0 ? quantity : 1);
 };
 
+function ItemMeta({ attributes }: { attributes: Attribute[] }) {
+  const quantity = attr(attributes, "quantity");
+  const actualPrice = attr(attributes, "actualPrice");
+  const expectedPrice = attr(attributes, "expectedPrice");
+  const price = actualPrice || expectedPrice;
+
+  if (!quantity && !price) return null;
+
+  return (
+    <span className="item-meta">
+      {quantity ? `Qty ${quantity}` : ""}
+      {quantity && price ? " · " : ""}
+      {price && (
+        <span className={actualPrice ? "item-price" : "item-price expected-price"}>
+          ₩{Number(price).toLocaleString("ko-KR")}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function AttributeRows({
   attributes,
   listId,
@@ -52,24 +76,27 @@ function AttributeRows({
             <input type="hidden" name="listId" value={listId} />
             <input type="hidden" name={cartItem ? "cartItemId" : "itemId"} value={itemId} />
             <input type="hidden" name="attributeKey" value={attribute.attributeKey} />
-            <input name="value" defaultValue={attribute.value} aria-label={attribute.attributeKey} />
-            <select
+            <TextField name="value" defaultValue={attribute.value} aria-label={attribute.attributeKey} />
+            <TextField
+              select
               key={attribute.attributeKey + (attribute.valueType ?? "TEXT")}
               name="valueType"
+              label="Type"
               defaultValue={String(attribute.valueType ?? "TEXT").toUpperCase()}
             >
-              <option>TEXT</option>
-              <option>NUMBER</option>
-              <option>BOOLEAN</option>
-            </select>
+              <MenuItem value="TEXT">TEXT</MenuItem>
+              <MenuItem value="NUMBER">NUMBER</MenuItem>
+              <MenuItem value="BOOLEAN">BOOLEAN</MenuItem>
+            </TextField>
             <div className="editable-attribute-actions">
-              <button className="secondary-button">Update</button>
-              <button
+              <Button variant="outlined" type="submit">Update</Button>
+              <Button
                 formAction={cartItem ? deleteCartItemAttribute : deleteListItemAttribute}
-                className="text-danger"
+                color="error"
+                type="submit"
               >
                 Delete
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -127,29 +154,22 @@ export default async function ListDetailPage({
         <div className="list-actions">
           <details>
             <summary>Edit list</summary>
-            <form action={updateList} className="compact-form">
+            <form action={updateList} className="compact-form list-edit-form">
               <input type="hidden" name="listId" value={id} />
-              <input name="name" defaultValue={list.name} aria-label="List name" required />
-              <button className="secondary-button">Save</button>
+              <TextField fullWidth name="name" defaultValue={list.name} label="List name" required />
+              <TextField fullWidth select name="defaultStoreId" label="Default store" defaultValue={list.defaultStoreId ?? ""}>
+                <MenuItem value="">No default store</MenuItem>
+                {list.household.stores.map((store) => (
+                  <MenuItem key={store.id} value={store.id}>{store.name}</MenuItem>
+                ))}
+              </TextField>
+              <Button variant="outlined" type="submit">Save</Button>
+              <Button formAction={deleteList} variant="outlined" color="error" type="submit">Delete</Button>
             </form>
           </details>
-          <form action={deleteList}>
-            <input type="hidden" name="listId" value={id} />
-            <button className="text-danger" type="submit">Delete list</button>
-          </form>
         </div>
 
-        <form action={addListItem} className="quick-add">
-          <input type="hidden" name="listId" value={id} />
-          <span>＋</span>
-          <input name="name" list="master-items" placeholder="Add something to your list..." />
-          <datalist id="master-items">
-            {list.household.items.map((item) => (
-              <option key={item.id} value={item.name} />
-            ))}
-          </datalist>
-          <button>Add</button>
-        </form>
+        <QuickAdd listId={id} items={list.household.items} />
 
         <div className="content-columns">
           <section className="items-panel">
@@ -159,9 +179,10 @@ export default async function ListDetailPage({
                 <form action={checkListItem} className="item-row">
                   <input type="hidden" name="listId" value={id} />
                   <input type="hidden" name="itemId" value={item.id} />
-                  <button className="check-button" aria-label={"Move " + item.name + " to cart"} />
+                  <ItemCheckButton checked={false} label={"Move " + item.name + " to cart"} />
                   <div className="item-copy">
                     <strong>{item.name}</strong>
+                    <ItemMeta attributes={item.attributes} />
                   </div>
                 </form>
                 <details className="item-edit">
@@ -170,18 +191,18 @@ export default async function ListDetailPage({
                   <form action={saveListItemAttribute} className="attribute-form custom-attribute-form">
                     <input type="hidden" name="listId" value={id} />
                     <input type="hidden" name="itemId" value={item.id} />
-                    <input name="attributeKey" placeholder="Attribute" />
-                    <input name="value" placeholder="Value" />
-                    <select name="valueType">
-                      <option>TEXT</option><option>NUMBER</option><option>BOOLEAN</option>
-                    </select>
-                    <button className="secondary-button">Save</button>
+                    <TextField name="attributeKey" placeholder="Attribute" label="Attribute" />
+                    <TextField name="value" placeholder="Value" label="Value" />
+                    <TextField select name="valueType" label="Type" defaultValue="TEXT">
+                      <MenuItem value="TEXT">TEXT</MenuItem><MenuItem value="NUMBER">NUMBER</MenuItem><MenuItem value="BOOLEAN">BOOLEAN</MenuItem>
+                    </TextField>
+                    <Button variant="outlined" type="submit">Save</Button>
                   </form>
                 </details>
                 <form action={deleteListItem} className="item-delete-form">
                   <input type="hidden" name="listId" value={id} />
                   <input type="hidden" name="itemId" value={item.id} />
-                  <button className="text-danger">Delete</button>
+                  <Button color="error" type="submit">Delete</Button>
                 </form>
               </div>
             ))}
@@ -193,36 +214,35 @@ export default async function ListDetailPage({
             </div>
             {cartItems.map((item) => (
               <div className="item-block" key={item.id}>
-                <div className="item-row checked">
-                  <span className="check-button checked-button">✓</span>
+                <form action={uncartItem} className="item-row checked">
+                  <input type="hidden" name="listId" value={id} />
+                  <input type="hidden" name="cartItemId" value={item.id} />
+                  <ItemCheckButton checked label={"Remove " + item.name + " from cart"} />
                   <div className="item-copy">
                     <strong>{item.name}</strong>
+                    <ItemMeta attributes={item.attributes} />
                   </div>
-                  <form action={uncartItem}>
-                    <input type="hidden" name="listId" value={id} />
-                    <input type="hidden" name="cartItemId" value={item.id} />
-                    <button className="uncart-button">Uncart</button>
-                  </form>
-                </div>
+                </form>
                 <details className="item-edit">
                   <summary>Edit attributes</summary>
                   <AttributeRows listId={id} itemId={item.id} attributes={item.attributes} cartItem />
-                  <form action={updateCartItem} className="attribute-form">
-                    <input type="hidden" name="listId" value={id} />
-                    <input type="hidden" name="cartItemId" value={item.id} />
-                    <input name="quantity" defaultValue={attr(item.attributes, "quantity")} placeholder="Quantity" />
-                    <input name="expectedPrice" defaultValue={attr(item.attributes, "expectedPrice")} placeholder="Price" />
-                    <button className="secondary-button">Save</button>
-                  </form>
                   <form action={saveCartItemAttribute} className="attribute-form custom-attribute-form">
                     <input type="hidden" name="listId" value={id} />
                     <input type="hidden" name="cartItemId" value={item.id} />
-                    <input name="attributeKey" placeholder="Attribute" />
-                    <input name="value" placeholder="Value" />
-                    <select name="valueType">
-                      <option>TEXT</option><option>NUMBER</option><option>BOOLEAN</option>
-                    </select>
-                    <button className="secondary-button">Save</button>
+                  <TextField name="attributeKey" placeholder="Attribute" label="Attribute" />
+                  <TextField name="value" placeholder="Value" label="Value" />
+                  <TextField select name="valueType" label="Type" defaultValue="TEXT">
+                    <MenuItem value="TEXT">TEXT</MenuItem><MenuItem value="NUMBER">NUMBER</MenuItem><MenuItem value="BOOLEAN">BOOLEAN</MenuItem>
+                  </TextField>
+                  <Button variant="outlined" type="submit">Save</Button>
+                  </form>
+                  <hr className="item-edit-divider" />
+                  <form action={updateCartItem} className="attribute-form">
+                    <input type="hidden" name="listId" value={id} />
+                    <input type="hidden" name="cartItemId" value={item.id} />
+                    <TextField name="quantity" defaultValue={attr(item.attributes, "quantity")} placeholder="Quantity" label="Quantity" />
+                    <TextField name="actualPrice" defaultValue={attr(item.attributes, "actualPrice")} placeholder="Price" label="Actual price" />
+                    <Button variant="outlined" type="submit">Save</Button>
                   </form>
                 </details>
               </div>
@@ -231,33 +251,37 @@ export default async function ListDetailPage({
 
           <aside className="cart-card">
             <p className="eyebrow">ACTIVE CART</p>
-            <h2>Market run <span className="cart-badge">{cartItems.length}</span></h2>
             {cartItems.length ? (
               <>
-                <p className="muted">
-                  Estimated total <strong>₩{total.toLocaleString("ko-KR")}</strong>
-                </p>
                 <form action={checkoutCart} className="stack-form">
                   <input type="hidden" name="listId" value={id} />
                   <input type="hidden" name="cartId" value={cart.id} />
-                  <select name="storeId">
-                    <option value="">Choose a store</option>
+                  <TextField select name="storeId" label="Store" defaultValue={cart.storeId ?? ""}>
+                    <MenuItem value="">Choose a store</MenuItem>
                     {list.household.stores.map((store) => (
-                      <option key={store.id} value={store.id}>{store.name}</option>
+                      <MenuItem key={store.id} value={store.id}>{store.name}</MenuItem>
                     ))}
-                  </select>
-                  <input type="date" name="purchasedAt" defaultValue={new Date().toISOString().slice(0, 10)} />
-                  <input
+                  </TextField>
+                  <TextField type="date" name="purchasedAt" label="Purchased at" defaultValue={new Date().toISOString().slice(0, 10)} slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField
                     key={total}
                     name="totalPrice"
                     type="number"
-                    min="0"
-                    step="0.01"
+                    label="Total price"
                     defaultValue={total > 0 ? total.toString() : ""}
                     placeholder="Total price"
+                    slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
                   />
-                  <textarea name="notes" placeholder="Notes" />
-                  <button className="primary-button full">Checkout <span>→</span></button>
+                  <TextField name="notes" placeholder="Notes" label="Notes" multiline minRows={2} />
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="secondary"
+                    type="submit"
+                    sx={{ mt: 1 }}
+                  >
+                    Checkout <span>→</span>
+                  </Button>
                 </form>
               </>
             ) : (

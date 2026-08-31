@@ -90,30 +90,34 @@ model HouseholdMember {
 }
 
 model ShoppingList {
-  id          String             @id @default(uuid()) @db.Uuid
-  householdId String             @map("household_id") @db.Uuid
-  name        String
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
-  household   Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  items       ShoppingListItem[]
-  carts       Cart[]
+  id             String             @id @default(uuid()) @db.Uuid
+  householdId    String             @map("household_id") @db.Uuid
+  defaultStoreId String?            @map("default_store_id") @db.Uuid
+  name           String
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  household      Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  defaultStore   Store?             @relation("ShoppingListDefaultStore", fields: [defaultStoreId], references: [id], onDelete: SetNull)
+  items          ShoppingListItem[]
+  carts          Cart[]
 
   @@index([householdId, updatedAt])
+  @@index([defaultStoreId])
   @@map("shopping_lists")
 }
 
 model Store {
-  id          String     @id @default(uuid()) @db.Uuid
-  householdId String     @map("household_id") @db.Uuid
-  name        String
-  type        StoreType  @default(LOCAL)
-  address     String?
-  url         String?
-  notes       String?
-  household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  carts       Cart[]
-  purchases   Purchase[]
+  id           String         @id @default(uuid()) @db.Uuid
+  householdId  String         @map("household_id") @db.Uuid
+  name         String
+  type         StoreType      @default(LOCAL)
+  address      String?
+  url          String?
+  notes        String?
+  household    Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  defaultLists ShoppingList[] @relation("ShoppingListDefaultStore")
+  carts        Cart[]
+  purchases    Purchase[]
 
   @@index([householdId, name])
   @@map("stores")
