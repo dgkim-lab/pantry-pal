@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { deleteMasterAttribute, deleteMasterItem, saveMasterAttribute, saveMasterItem } from "@/app/actions";
 import { SiteHeader } from "@/app/components/site-header";
+import { CatalogCheckbox, CatalogSelection } from "@/app/components/catalog-selection";
 
 const fields = (item?: {
   id: string;
@@ -31,6 +32,11 @@ export default async function CatalogPage() {
     include: { attributes: true },
     orderBy: { name: "asc" },
   });
+  const lists = await prisma.shoppingList.findMany({
+    where: { householdId: membership.householdId },
+    select: { id: true, name: true },
+    orderBy: { updatedAt: "desc" },
+  });
 
   return (
     <main className="app-shell">
@@ -48,12 +54,22 @@ export default async function CatalogPage() {
             <Button variant="contained" type="submit">Create item</Button>
           </form>
         </details>
-        <section className="catalog-list">
-          {items.map((item) => (
-            <details className="catalog-item" key={item.id}>
+        <CatalogSelection items={items.map(({ id, name }) => ({ id, name }))} lists={lists}>
+          <section className="catalog-list">
+            {items.map((item) => (
+              <details className="catalog-item" key={item.id}>
               <summary>
+                <CatalogCheckbox item={item} />
                 <span className="catalog-name">{item.name}</span>
-                <span>{item.attributes.length} attributes</span>
+                <span
+                  className="catalog-attributes catalog-attributes-full"
+                  title={item.attributes.map((attribute) => `${attribute.attributeKey}: ${attribute.value}`).join(" · ") || "No attributes"}
+                >
+                  {item.attributes.map((attribute) => `${attribute.attributeKey}: ${attribute.value}`).join(" · ") || "No attributes"}
+                </span>
+                <span className="catalog-attributes catalog-attributes-count">
+                  {item.attributes.length} {item.attributes.length === 1 ? "attribute" : "attributes"}
+                </span>
               </summary>
               <form action={saveMasterItem} className="field-grid wide-fields">
                 {fields(item)}
@@ -94,6 +110,7 @@ export default async function CatalogPage() {
                   </form>
                 ))}
               </div>
+              <hr className="attribute-divider" />
               <form action={saveMasterAttribute} className="attribute-form custom-attribute-form">
                 <input type="hidden" name="masterItemId" value={item.id} />
                 <TextField name="attributeKey" placeholder="Custom attribute" label="Attribute" />
@@ -105,9 +122,10 @@ export default async function CatalogPage() {
                 </TextField>
                 <Button variant="outlined" type="submit">Save attribute</Button>
               </form>
-            </details>
-          ))}
-        </section>
+              </details>
+            ))}
+          </section>
+        </CatalogSelection>
       </div>
     </main>
   );

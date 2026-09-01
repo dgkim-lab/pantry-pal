@@ -62,3 +62,73 @@ details summary { cursor:pointer; color:var(--green); font-size:13px; font-weigh
   .list-edit-form { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
   .list-edit-form button { width:100%; }
 }
+.catalog-select { display:inline-grid; place-items:center; width:22px; height:22px; flex:none; cursor:pointer; }
+.catalog-select .MuiCheckbox-root { color:#bbc2b9; }
+.catalog-select .MuiCheckbox-root.Mui-checked { color:var(--green); }
+.catalog-item summary { display:grid; grid-template-columns:auto minmax(0,2fr) minmax(0,8fr); align-items:center; gap:12px; min-width:0; }
+.catalog-item summary > .catalog-name { text-align:left; min-width:0; }
+.catalog-item summary > .catalog-attributes { min-width:0; overflow:hidden; color:var(--muted); text-overflow:ellipsis; white-space:nowrap; }
+.catalog-attributes-count { display:none; }
+.catalog-item .wide-fields { width:100%; max-width:none; }
+.catalog-item .attribute-list > form.editable-attribute-row { flex:0 0 100%; width:100%; max-width:100%; }
+.catalog-item .attribute-divider { border:0; border-top:1px solid var(--line); margin:18px 0 14px; }
+.catalog-item .custom-attribute-form { grid-template-columns:minmax(0,1fr) minmax(0,1fr) 110px auto; }
+.catalog-item .custom-attribute-form input[name="attributeKey"],
+.catalog-item .custom-attribute-form input[name="value"],
+.catalog-item .custom-attribute-form select,
+.catalog-item .custom-attribute-form button { grid-column:auto; grid-row:auto; }
+.catalog-cart { margin-top:18px; background:var(--green); color:#f7f7ef; border-radius:20px; padding:26px; }
+.catalog-cart h2 { font-size:27px; margin-bottom:0; }.catalog-cart-count { display:grid; place-items:center; width:40px; height:40px; border-radius:50%; background:var(--sage); color:var(--green); }
+.catalog-cart-form { display:grid; grid-template-columns:minmax(0,1fr) minmax(190px,260px) auto; gap:12px; align-items:center; margin-top:20px; }
+.catalog-selected-names { display:flex; flex-wrap:wrap; gap:6px; }.catalog-selected-names span { padding:6px 9px; border-radius:8px; background:#466d59; color:#f7f7ef; font-size:12px; }
+.catalog-cart .MuiInputLabel-root { color:#b6c8bb; }.catalog-cart .MuiOutlinedInput-root { color:#f7f7ef; }.catalog-cart .MuiOutlinedInput-notchedOutline { border-color:#66806f; }.catalog-cart .MuiInputLabel-root.Mui-focused { color:#d9a17f; }
+.catalog-toast { position:fixed; right:24px; bottom:24px; z-index:10; padding:13px 17px; border-radius:11px; background:var(--ink); color:#f7f7ef; box-shadow:0 10px 30px rgba(30,41,38,.2); font-size:13px; }
+@media (max-width:760px) { .catalog-cart-form { grid-template-columns:1fr; }.catalog-cart-form button { width:100%; } }
+@media (max-width:760px) {
+  .catalog-item summary { display:flex; gap:10px; }
+  .catalog-item summary > .catalog-name { flex:1 1 auto; }
+  .catalog-attributes-full { display:none; }
+  .catalog-attributes-count { display:block; flex:none; }
+  .catalog-item .custom-attribute-form { grid-template-columns:1fr 1fr; }
+  .catalog-item .custom-attribute-form input[name="attributeKey"],
+  .catalog-item .custom-attribute-form input[name="value"],
+  .catalog-item .custom-attribute-form select,
+  .catalog-item .custom-attribute-form button { grid-column:auto; grid-row:auto; }
+  .catalog-item .custom-attribute-form input[name="attributeKey"] { grid-column:1; grid-row:1; }
+  .catalog-item .custom-attribute-form input[name="value"] { grid-column:2; grid-row:1; }
+  .catalog-item .custom-attribute-form select { grid-column:1; grid-row:2; }
+  .catalog-item .custom-attribute-form button { grid-column:2; grid-row:2; }
+}
+@media (min-width:761px) {
+  .catalog-item form.custom-attribute-form {
+    display:grid !important;
+    grid-template-columns:minmax(120px,.8fr) minmax(0,1.4fr) minmax(120px,.6fr) auto !important;
+    width:100%;
+    align-items:center;
+  }
+  .catalog-item form.custom-attribute-form > .MuiFormControl-root {
+    grid-row:1;
+    min-width:0;
+    width:100%;
+  }
+  .catalog-item form.custom-attribute-form > .MuiFormControl-root:nth-of-type(1) { grid-column:1; }
+  .catalog-item form.custom-attribute-form > .MuiFormControl-root:nth-of-type(2) { grid-column:2; }
+  .catalog-item form.custom-attribute-form > .MuiFormControl-root:nth-of-type(3) { grid-column:3; }
+  .catalog-item form.custom-attribute-form > button { grid-column:4; grid-row:1; }
+  .catalog-item form.editable-attribute-row {
+    grid-template-columns:minmax(120px,.8fr) minmax(0,1.4fr) minmax(120px,.6fr) auto !important;
+    align-items:center;
+  }
+  .catalog-item form.editable-attribute-row > .attribute-name { grid-column:1; grid-row:1; }
+  .catalog-item form.editable-attribute-row > .MuiFormControl-root {
+    grid-row:1;
+    min-width:0;
+    width:100%;
+  }
+  .catalog-item form.editable-attribute-row > .MuiFormControl-root:nth-of-type(1) { grid-column:2; }
+  .catalog-item form.editable-attribute-row > .MuiFormControl-root:nth-of-type(2) { grid-column:3; }
+  .catalog-item form.editable-attribute-row > .editable-attribute-actions {
+    grid-column:4;
+    grid-row:1;
+  }
+}

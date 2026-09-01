@@ -48,6 +48,41 @@ export async function addListItem(formData: FormData) {
   revalidatePath(`/lists/${listId}`);
 }
 
+export async function addMasterItemsToList(formData: FormData) {
+  const listId = String(formData.get("listId") ?? "");
+  const masterItemIds = [...new Set(formData.getAll("masterItemId").map(String).filter(Boolean))];
+  if (!listId || masterItemIds.length === 0) return;
+  const membership = await getMembership(listId);
+  if (membership.role === "VIEWER") throw new Error("Viewers cannot edit lists");
+  const masters = await prisma.masterItem.findMany({
+    where: { id: { in: masterItemIds }, householdId: membership.householdId },
+    include: { attributes: true },
+  });
+  const existingItems = await prisma.shoppingListItem.findMany({
+    where: { listId, status: { in: ["OPEN", "IN_CART"] } },
+    select: { name: true, masterItemId: true },
+  });
+  const existingMasterIds = new Set(existingItems.flatMap((item) => item.masterItemId ? [item.masterItemId] : []));
+  const names = new Set(existingItems.map((item) => item.name.toLocaleLowerCase().replace(/\s+/g, " ").trim()));
+  const mastersToAdd = masters.filter((master) => {
+    const normalizedName = master.name.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+    if (existingMasterIds.has(master.id) || names.has(normalizedName)) return false;
+    existingMasterIds.add(master.id);
+    names.add(normalizedName);
+    return true;
+  });
+  await prisma.$transaction(mastersToAdd.map((master) => prisma.shoppingListItem.create({
+    data: {
+      listId,
+      masterItemId: master.id,
+      name: master.name,
+      attributes: { create: master.attributes.map(({ attributeKey, value, valueType }) => ({ attributeKey, value, valueType })) },
+    },
+  })));
+  revalidatePath(`/lists/${listId}`);
+  revalidatePath("/catalog");
+}
+
 export async function checkListItem(formData: FormData) {
   const listId = String(formData.get("listId"));
   const itemId = String(formData.get("itemId"));

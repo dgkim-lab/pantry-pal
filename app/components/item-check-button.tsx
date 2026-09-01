@@ -1,14 +1,14 @@
 "use client";
 
-import { Checkbox } from "@mui/material";
+import { Checkbox, CheckboxProps } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 
-export function ItemCheckButton({ checked, label }: { checked: boolean; label: string }) {
+export function ItemCheckButton({ checked, label, onChange }: { checked: boolean; label: string; onChange?: CheckboxProps["onChange"] }) {
   return (
     <Checkbox
       checked={checked}
-      onChange={(event) => event.currentTarget.form?.requestSubmit()}
+      onChange={onChange ?? ((event) => event.currentTarget.form?.requestSubmit())}
       slotProps={{ input: { "aria-label": label } }}
       icon={<RadioButtonUncheckedIcon />}
       checkedIcon={<CheckCircleIcon />}
