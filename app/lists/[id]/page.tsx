@@ -35,6 +35,17 @@ const lineTotal = (attributes: readonly Attribute[]) => {
     (Number.isFinite(quantity) && quantity > 0 ? quantity : 1);
 };
 
+const todayForDateInput = () => {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: process.env.DEFAULT_TIMEZONE || "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
 function ItemMeta({ attributes }: { attributes: Attribute[] }) {
   const quantity = attr(attributes, "quantity");
   const actualPrice = attr(attributes, "actualPrice");
@@ -287,7 +298,7 @@ export default async function ListDetailPage({
                       <MenuItem key={store.id} value={store.id}>{store.name}</MenuItem>
                     ))}
                   </TextField>
-                  <TextField type="date" name="purchasedAt" label="Purchased at" defaultValue={new Date().toISOString().slice(0, 10)} slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField type="date" name="purchasedAt" label="Purchased at" defaultValue={todayForDateInput()} slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField
                     key={total}
                     name="totalPrice"
