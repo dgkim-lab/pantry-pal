@@ -28,7 +28,7 @@ This backlog tracks work remaining after the initial list → cart vertical slic
 
 ## Priority 3 — PWA and user experience
 
-- [ ] Add production PWA icons and favicon assets.
+- [x] Add production PWA icons and favicon assets.
 - [ ] Add service-worker caching for the app shell and static assets.
 - [ ] Add install guidance for iPhone Safari and desktop browsers.
 - [ ] Keep data mutations online-only; show a clear offline/unavailable state.
@@ -52,8 +52,8 @@ This backlog tracks work remaining after the initial list → cart vertical slic
 ## Priority 5 — Operations
 
 - [ ] Decide whether to retain the current rewritten initial migration or create a forward migration for any database that used the old schema.
-- [ ] Add container health/readiness endpoints and wire them into the GitOps handoff.
+- [x] Add container health/readiness endpoints and wire them into the GitOps handoff.
 - [ ] Add CI for install, Prisma validation/generation, typecheck, tests, and production build.
-- [ ] Publish the container image using the Git commit SHA or digest.
-- [ ] Add GitOps repository configuration for migration Job, runtime Deployment, ingress, secrets, and TLS.
-- [ ] Document PostgreSQL backup and restore ownership.
+- [x] Publish the container image using the Git commit SHA or digest.
+- [x] Add GitOps repository configuration for migration Job, runtime Deployment, ingress, secrets, and TLS.
+- [x] Document PostgreSQL backup and restore ownership.
