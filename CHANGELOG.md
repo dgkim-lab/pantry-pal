@@ -1,0 +1,29 @@
+# Changelog
+
+## [Unreleased]
+
+Future changes will be listed here.
+
+## [0.2.0] - 2026-09-03
+
+- Added household creation and household switching.
+- Added member invitations with expiring invitation tokens and invitee acceptance UI.
+- Added household member lists and owner/editor/viewer role management.
+- Enforced household membership and role permissions across mutations.
+- Added account/profile and sign-out UI.
+- Added a shared household selector with responsive desktop and mobile navigation behavior.
+- Added an authenticated household data endpoint for shared navigation state.
+- Added health checks, client error telemetry, OpenTelemetry instrumentation, and production PWA icon assets.
+- Improved catalog quick-add/deduplication, cart quantity editing, purchase-date timezone handling, and responsive list/cart UI.
+
+## [0.1.0] - 2026-08-31
+
+- Added OIDC authentication with Cognito logout support.
+- Added shopping-list creation, editing, deletion, item autocomplete, and item detail attributes.
+- Added reusable master-item catalog creation, editing, deletion, and list reuse.
+- Added cart creation, item editing, removal, restoration, store selection, and totals.
+- Added store CRUD with local and online store details.
+- Added checkout for purchase date, currency, notes, actual prices, and quantities.
+- Added purchase history with immutable purchase snapshots and buy-again actions.
+- Added PostgreSQL persistence with Prisma migrations and household-scoped data access.
+- Added the initial responsive Pantry Pal interface, PWA manifest, and navigation structure.
