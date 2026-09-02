@@ -3,7 +3,9 @@ import { Button, Paper, Typography } from "@mui/material";
 
 export const dynamic = "force-dynamic";
 
-export default function SignInPage() {
+export default async function SignInPage({ searchParams }: { searchParams: Promise<{ callbackUrl?: string }> }) {
+  const { callbackUrl } = await searchParams;
+  const redirectTo = callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/lists";
   return (
     <main className="auth-shell">
       <Paper className="auth-card" elevation={0} sx={{ bgcolor: "transparent" }}>
@@ -19,7 +21,7 @@ export default function SignInPage() {
         {authProviderConfigured ? (
           <form action={async () => {
             "use server";
-            await signIn("oidc", { redirectTo: "/lists" });
+            await signIn("oidc", { redirectTo });
           }}>
             <Button className="full" variant="contained" size="large" type="submit">
               Continue with your account <span>→</span>

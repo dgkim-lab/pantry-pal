@@ -3,6 +3,7 @@ import { Button, Card, CardContent, LinearProgress, TextField, Typography } from
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getActiveMembership } from "@/lib/household";
 import { createList } from "@/app/actions";
 import { SiteHeader } from "@/app/components/site-header";
 
@@ -10,8 +11,10 @@ export default async function ListsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
+  const membership = await getActiveMembership();
+  if (!membership) redirect("/households");
   const lists = await prisma.shoppingList.findMany({
-    where: { household: { members: { some: { userId: session.user.id } } } },
+    where: { householdId: membership.householdId },
     include: {
       items: {
         where: { status: { in: ["OPEN", "IN_CART"] } },

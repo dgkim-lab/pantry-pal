@@ -6,9 +6,21 @@ import { MobileNavigation } from "@/app/components/mobile-navigation";
 import { RefreshButton } from "@/app/components/refresh-button";
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { ClientErrorTestButton } from "@/app/components/client-error-test-button";
+import { HouseholdSelector } from "@/app/components/household-selector";
+
+type HouseholdOption = { householdId: string; household: { name: string } };
 
 export function SiteHeader({ name, listTitle }: { name?: string | null; listTitle?: string }) {
   const [showListTitle, setShowListTitle] = useState(false);
+  const [households, setHouseholds] = useState<HouseholdOption[]>([]);
+  const [activeHouseholdId, setActiveHouseholdId] = useState<string>();
+
+  useEffect(() => {
+    fetch("/api/households", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() as Promise<{ households: HouseholdOption[]; activeHouseholdId: string | null }> : null)
+      .then((data) => { if (data) { setHouseholds(data.households); setActiveHouseholdId(data.activeHouseholdId ?? undefined); } })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!listTitle) return;
@@ -39,27 +51,27 @@ export function SiteHeader({ name, listTitle }: { name?: string | null; listTitl
           direction="row"
           spacing={{ xs: 0.25, sm: 1 }}
           aria-label="Primary navigation"
-          sx={{ ml: "auto", minWidth: 0, overflowX: "auto", whiteSpace: "nowrap", display: { xs: "none", sm: "flex" } }}
+          sx={{ ml: "auto", minWidth: 0, overflowX: "auto", whiteSpace: "nowrap", display: { xs: "none", lg: "flex" } }}
         >
           <Button href="/lists" color="inherit" size="small">Lists</Button>
           <Button href="/catalog" color="inherit" size="small">Catalog</Button>
           <Button href="/stores" color="inherit" size="small">Stores</Button>
           <Button href="/history" color="inherit" size="small">History</Button>
+          <Button href="/households" color="inherit" size="small">Household</Button>
+          <HouseholdSelector households={households} activeHouseholdId={activeHouseholdId} />
           <ClientErrorTestButton />
         </Stack>
-        <Box sx={{ display: { xs: "none", sm: "block" } }}>
+        <Box sx={{ display: { xs: "none", lg: "block" } }}>
           <RefreshButton />
         </Box>
-        <Box sx={{ display: { xs: "none", sm: "block" } }}>
-          <Avatar sx={{ width: 34, height: 34, bgcolor: "#c9d7c7", color: "primary.main", fontWeight: 700 }}>
-            {name?.slice(0, 1) ?? "U"}
-          </Avatar>
+        <Box sx={{ display: { xs: "none", lg: "block" } }}>
+          <Button href="/account" aria-label="Open account" sx={{ minWidth: 34, p: 0 }}><Avatar sx={{ width: 34, height: 34, bgcolor: "#c9d7c7", color: "primary.main", fontWeight: 700 }}>{name?.slice(0, 1) ?? "U"}</Avatar></Button>
         </Box>
-        <Box sx={{ display: { xs: "none", sm: "block" } }}>
+        <Box sx={{ display: { xs: "none", lg: "block" } }}>
           <SignOutButton />
         </Box>
-        <Box sx={{ display: { xs: "block", sm: "none" }, ml: "auto" }}>
-          <MobileNavigation />
+        <Box sx={{ display: { xs: "block", lg: "none" }, ml: "auto" }}>
+          <MobileNavigation households={households} activeHouseholdId={activeHouseholdId} />
         </Box>
       </Toolbar>
     </AppBar>

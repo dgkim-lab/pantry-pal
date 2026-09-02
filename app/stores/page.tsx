@@ -4,16 +4,14 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createStore, deleteStore, updateStore } from "@/app/actions";
 import { SiteHeader } from "@/app/components/site-header";
+import { getActiveMembership } from "@/lib/household";
 
 export default async function StoresPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
-  const membership = await prisma.householdMember.findFirst({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "asc" },
-  });
-  if (!membership) redirect("/lists");
+  const membership = await getActiveMembership();
+  if (!membership) redirect("/households");
 
   const stores = await prisma.store.findMany({
     where: { householdId: membership.householdId },

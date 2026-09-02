@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
 
 export function SiteFooter() {
-  const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "dev";
+  const version = (process.env.NEXT_PUBLIC_APP_VERSION ?? "dev").replace(/^v/i, "");
 
   return (
     <Box component="footer" className="site-footer">

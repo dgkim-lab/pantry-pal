@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { buyAgain } from "@/app/actions";
 import { SiteHeader } from "@/app/components/site-header";
+import { getActiveMembership } from "@/lib/household";
 
 const attributeAliases: Record<string, string[]> = {
   actualPrice: ["actual_price", "actualPrice", "actualprice"],
@@ -20,11 +21,8 @@ export default async function HistoryPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
-  const membership = await prisma.householdMember.findFirst({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "asc" },
-  });
-  if (!membership) redirect("/lists");
+  const membership = await getActiveMembership();
+  if (!membership) redirect("/households");
 
   const [purchases, lists] = await Promise.all([
     prisma.purchase.findMany({

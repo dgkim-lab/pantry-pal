@@ -56,6 +56,7 @@ model User {
   updatedAt   DateTime          @updatedAt @map("updated_at")
   memberships HouseholdMember[]
   masterItems MasterItem[]
+  sentInvitations HouseholdInvitation[] @relation("InvitationSender")
 
   @@map("users")
 }
@@ -71,8 +72,26 @@ model Household {
   items     MasterItem[]
   carts     Cart[]
   purchases Purchase[]
+  invitations HouseholdInvitation[]
 
   @@map("households")
+}
+
+model HouseholdInvitation {
+  id          String      @id @default(uuid()) @db.Uuid
+  householdId String      @map("household_id") @db.Uuid
+  invitedById String      @map("invited_by_id") @db.Uuid
+  email       String
+  role        MemberRole  @default(EDITOR)
+  token       String      @unique
+  expiresAt   DateTime    @map("expires_at")
+  acceptedAt  DateTime?   @map("accepted_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  household   Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  invitedBy   User        @relation("InvitationSender", fields: [invitedById], references: [id])
+
+  @@index([email, acceptedAt])
+  @@map("household_invitations")
 }
 
 model HouseholdMember {

@@ -15,15 +15,18 @@ import MenuIcon from "@mui/icons-material/Menu";
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { RefreshButton } from "@/app/components/refresh-button";
 import { ClientErrorTestButton } from "@/app/components/client-error-test-button";
+import { HouseholdSelector } from "@/app/components/household-selector";
 
 const links = [
   ["Lists", "/lists"],
   ["Catalog", "/catalog"],
   ["Stores", "/stores"],
   ["History", "/history"],
+  ["Households", "/households"],
+  ["Account", "/account"],
 ] as const;
 
-export function MobileNavigation() {
+export function MobileNavigation({ households = [], activeHouseholdId }: { households?: readonly { householdId: string; household: { name: string } }[]; activeHouseholdId?: string }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
@@ -49,6 +52,7 @@ export function MobileNavigation() {
               </ListItemButton>
             ))}
           </List>
+          <HouseholdSelector households={households} activeHouseholdId={activeHouseholdId} />
           <Divider />
           <Stack sx={{ p: 2 }}>
             <ClientErrorTestButton />

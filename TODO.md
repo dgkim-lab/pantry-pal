@@ -20,11 +20,11 @@ This backlog tracks work remaining after the initial list → cart vertical slic
 
 ## Priority 2 — Collaboration and account management
 
-- [ ] Add household creation and household switching.
-- [ ] Add member invitation flow.
-- [ ] Add member list and owner/editor/viewer role management.
-- [ ] Enforce role permissions consistently in every mutation.
-- [ ] Add account/profile and sign-out UI.
+- [x] Add household creation and household switching.
+- [x] Add member invitation flow.
+- [x] Add member list and owner/editor/viewer role management.
+- [x] Enforce role permissions consistently in every mutation.
+- [x] Add account/profile and sign-out UI.
 
 ## Priority 3 — PWA and user experience
 

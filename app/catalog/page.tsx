@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { deleteMasterAttribute, deleteMasterItem, saveMasterAttribute, saveMasterItem } from "@/app/actions";
 import { SiteHeader } from "@/app/components/site-header";
 import { CatalogCheckbox, CatalogSelection } from "@/app/components/catalog-selection";
+import { getActiveMembership } from "@/lib/household";
 
 const fields = (item?: {
   id: string;
@@ -21,11 +22,8 @@ export default async function CatalogPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
-  const membership = await prisma.householdMember.findFirst({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "asc" },
-  });
-  if (!membership) redirect("/lists");
+  const membership = await getActiveMembership();
+  if (!membership) redirect("/households");
 
   const items = await prisma.masterItem.findMany({
     where: { householdId: membership.householdId },

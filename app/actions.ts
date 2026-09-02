@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { randomUUID } from "node:crypto";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -103,14 +105,11 @@ export async function checkListItem(formData: FormData) {
 }
 
 export async function createList(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Sign in required");
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, include: { memberships: true } });
-  if (!user) throw new Error("Account is not provisioned yet");
-  const householdId = user.memberships[0]?.householdId ?? (await prisma.household.create({ data: { name: `${user.name ?? "My"} household`, members: { create: { userId: user.id, role: "OWNER" } } } })).id;
-  await prisma.shoppingList.create({ data: { householdId, name } });
+  const membership = await getHouseholdMembership();
+  if (membership.role === "VIEWER") throw new Error("Viewers cannot create lists");
+  await prisma.shoppingList.create({ data: { householdId: membership.householdId, name } });
   revalidatePath("/lists");
 }
 
@@ -254,9 +253,87 @@ export async function deleteCartItemAttribute(formData: FormData) {
 async function getHouseholdMembership() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Sign in required");
-  const membership = await prisma.householdMember.findFirst({ where: { userId: session.user.id }, orderBy: { createdAt: "asc" } });
+  const selectedId = (await cookies()).get("pantry-pal-household-id")?.value;
+  const membership = await prisma.householdMember.findFirst({ where: { userId: session.user.id, ...(selectedId ? { householdId: selectedId } : {}) }, orderBy: { createdAt: "asc" } });
   if (!membership) throw new Error("Household membership required");
   return membership;
+}
+
+async function requireOwner() {
+  const membership = await getHouseholdMembership();
+  if (membership.role !== "OWNER") throw new Error("Only household owners can manage members");
+  return membership;
+}
+
+export async function createHousehold(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Sign in required");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+  const household = await prisma.household.create({ data: { name, members: { create: { userId: session.user.id, role: "OWNER" } } } });
+  (await cookies()).set("pantry-pal-household-id", household.id, { httpOnly: true, sameSite: "lax", path: "/" });
+  revalidatePath("/households"); revalidatePath("/lists");
+}
+
+export async function switchHousehold(formData: FormData) {
+  const id = String(formData.get("householdId") ?? "");
+  const session = await auth();
+  if (!session?.user?.id || !id) throw new Error("Sign in required");
+  const membership = await prisma.householdMember.findFirst({ where: { householdId: id, userId: session.user.id } });
+  if (!membership) throw new Error("You do not have access to this household");
+  (await cookies()).set("pantry-pal-household-id", id, { httpOnly: true, sameSite: "lax", path: "/" });
+  revalidatePath("/households"); revalidatePath("/lists");
+  redirect("/lists");
+}
+
+export async function inviteMember(formData: FormData) {
+  const membership = await requireOwner();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const role = String(formData.get("role")) === "VIEWER" ? "VIEWER" : "EDITOR";
+  if (!email) return;
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing && await prisma.householdMember.findUnique({ where: { householdId_userId: { householdId: membership.householdId, userId: existing.id } } })) throw new Error("That person is already a member");
+  const invitation = await prisma.householdInvitation.create({ data: { householdId: membership.householdId, invitedById: membership.userId, email, role, token: randomUUID(), expiresAt: new Date(Date.now() + 7 * 86400000) } });
+  revalidatePath("/households");
+}
+
+export async function acceptInvitation(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  const session = await auth();
+  if (!session?.user?.id || !token) throw new Error("Sign in required");
+  const invitation = await prisma.householdInvitation.findUnique({ where: { token } });
+  if (!invitation || invitation.acceptedAt || invitation.expiresAt < new Date()) throw new Error("This invitation is no longer valid");
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user || user.email.toLowerCase() !== invitation.email) throw new Error("Sign in with the invited email address");
+  await prisma.$transaction([
+    prisma.householdMember.upsert({ where: { householdId_userId: { householdId: invitation.householdId, userId: user.id } }, update: { role: invitation.role }, create: { householdId: invitation.householdId, userId: user.id, role: invitation.role } }),
+    prisma.householdInvitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } }),
+  ]);
+  (await cookies()).set("pantry-pal-household-id", invitation.householdId, { httpOnly: true, sameSite: "lax", path: "/" });
+  redirect("/lists");
+}
+
+export async function updateMemberRole(formData: FormData) {
+  const owner = await requireOwner();
+  const memberId = String(formData.get("memberId") ?? "");
+  const role = String(formData.get("role"));
+  const member = await prisma.householdMember.findFirst({ where: { id: memberId, householdId: owner.householdId } });
+  if (!member || member.userId === owner.userId || !["OWNER", "EDITOR", "VIEWER"].includes(role)) return;
+  if (member.role === "OWNER" && role !== "OWNER") {
+    const owners = await prisma.householdMember.count({ where: { householdId: owner.householdId, role: "OWNER" } });
+    if (owners <= 1) throw new Error("A household must have an owner");
+  }
+  await prisma.householdMember.update({ where: { id: memberId }, data: { role: role as "OWNER" | "EDITOR" | "VIEWER" } });
+  revalidatePath("/households");
+}
+
+export async function removeMember(formData: FormData) {
+  const owner = await requireOwner();
+  const memberId = String(formData.get("memberId") ?? "");
+  const member = await prisma.householdMember.findFirst({ where: { id: memberId, householdId: owner.householdId } });
+  if (!member || member.userId === owner.userId) return;
+  await prisma.householdMember.delete({ where: { id: memberId } });
+  revalidatePath("/households");
 }
 
 export async function updateList(formData: FormData) {
@@ -363,7 +440,7 @@ export async function saveMasterItem(formData: FormData) {
   if (!name) return;
   const masterItemId = optionalValue(formData, "masterItemId");
   const data = { name, normalizedName: name.toLocaleLowerCase().replace(/\s+/g, " ") };
-  const item = masterItemId ? await prisma.masterItem.update({ where: { id: masterItemId }, data }) : await prisma.masterItem.create({ data: { ...data, householdId: membership.householdId, createdById: membership.userId } });
+  const item = masterItemId ? await prisma.masterItem.updateMany({ where: { id: masterItemId, householdId: membership.householdId }, data }).then(async (result) => { if (!result.count) throw new Error("Catalog item not found"); return prisma.masterItem.findUniqueOrThrow({ where: { id: masterItemId } }); }) : await prisma.masterItem.create({ data: { ...data, householdId: membership.householdId, createdById: membership.userId } });
   if (!masterItemId) {
     await prisma.masterItemAttribute.createMany({
       data: [
