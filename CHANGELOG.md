@@ -10,6 +10,8 @@ Future changes will be listed here.
 - Added RabbitMQ exchange-based receipt delivery and a standalone SMTP email worker.
 - Documented local receipt testing and GitOps deployment requirements for the worker.
 - Added purchase deletion from history with an explicit confirmation dialog.
+- Added receipt publisher tracing and graceful checkout behavior when RabbitMQ is unavailable.
+- Added receipt-worker spans for RabbitMQ processing, PDF retrieval, and SMTP delivery.
 
 ## [0.2.0] - 2026-09-03
 
