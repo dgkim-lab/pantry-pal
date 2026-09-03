@@ -48,6 +48,11 @@ may use a ConfigMap:
 - `SMTP_PASSWORD` (if required by the SMTP server)
 - `SMTP_FROM`
 
+Set `OTEL_SERVICE_NAME=pantry-pal-receipt-worker` on the receipt-worker
+Deployment so its RabbitMQ, PDF-fetch, and SMTP spans are distinguishable from
+web-runtime spans. It uses the same `OTEL_EXPORTER_OTLP_ENDPOINT` and resource
+attributes as the web Deployment.
+
 For OpenTelemetry, inject these non-secret settings from the collector service
 configured by GitOps:
 

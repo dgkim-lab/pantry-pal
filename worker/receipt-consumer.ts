@@ -1,11 +1,14 @@
 import "dotenv/config";
+import "../instrumentation.node";
 import amqp from "amqplib";
 import nodemailer from "nodemailer";
+import { SpanStatusCode, trace } from "@opentelemetry/api";
 import { receiptExchangeName, receiptQueueName, receiptRoutingKey, type ReceiptMessage } from "@/lib/receipt-queue";
 
 const rabbitUrl = process.env.RABBITMQ_URL ?? "amqp://localhost:5672";
 const receiptApiUrl = (process.env.RECEIPT_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const internalToken = process.env.RECEIPT_INTERNAL_TOKEN;
+const tracer = trace.getTracer("pantry-pal.receipt-worker");
 
 if (!internalToken) throw new Error("RECEIPT_INTERNAL_TOKEN is required");
 if (!process.env.SMTP_HOST || !process.env.SMTP_FROM) throw new Error("SMTP_HOST and SMTP_FROM are required");
@@ -25,17 +28,45 @@ function parseMessage(content: Buffer): ReceiptMessage {
 }
 
 async function sendReceipt(message: ReceiptMessage) {
-  const response = await fetch(`${receiptApiUrl}/api/purchases/${encodeURIComponent(message.purchaseId)}/receipt`, {
-    headers: { Authorization: `Bearer ${internalToken}` },
+  const pdf = await tracer.startActiveSpan("receipt.fetch_pdf", async (span) => {
+    span.setAttribute("receipt.purchase_id", message.purchaseId);
+    try {
+      const response = await fetch(`${receiptApiUrl}/api/purchases/${encodeURIComponent(message.purchaseId)}/receipt`, {
+        headers: { Authorization: `Bearer ${internalToken}` },
+      });
+      span.setAttribute("http.response.status_code", response.status);
+      if (!response.ok) throw new Error(`Receipt API returned ${response.status}`);
+      const result = Buffer.from(await response.arrayBuffer());
+      span.setAttribute("receipt.pdf.size_bytes", result.length);
+      span.setStatus({ code: SpanStatusCode.OK });
+      return result;
+    } catch (error) {
+      span.recordException(error instanceof Error ? error : new Error(String(error)));
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw error;
+    } finally {
+      span.end();
+    }
   });
-  if (!response.ok) throw new Error(`Receipt API returned ${response.status}`);
-  const pdf = Buffer.from(await response.arrayBuffer());
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM,
-    to: message.recipient,
-    subject: `Pantry Pal receipt ${message.purchaseId}`,
-    text: "Your Pantry Pal purchase receipt is attached.",
-    attachments: [{ filename: `pantry-pal-receipt-${message.purchaseId}.pdf`, content: pdf, contentType: "application/pdf" }],
+
+  await tracer.startActiveSpan("receipt.send_email", async (span) => {
+    span.setAttribute("receipt.purchase_id", message.purchaseId);
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM,
+        to: message.recipient,
+        subject: `Pantry Pal receipt ${message.purchaseId}`,
+        text: "Your Pantry Pal purchase receipt is attached.",
+        attachments: [{ filename: `pantry-pal-receipt-${message.purchaseId}.pdf`, content: pdf, contentType: "application/pdf" }],
+      });
+      span.setStatus({ code: SpanStatusCode.OK });
+    } catch (error) {
+      span.recordException(error instanceof Error ? error : new Error(String(error)));
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw error;
+    } finally {
+      span.end();
+    }
   });
 }
 
@@ -50,13 +81,25 @@ async function main() {
 
   await channel.consume(receiptQueueName, async (message) => {
     if (!message) return;
-    try {
-      await sendReceipt(parseMessage(message.content));
-      channel.ack(message);
-    } catch (error) {
-      console.error("Receipt delivery failed; message will be retried", error);
-      channel.nack(message, false, true);
-    }
+    await tracer.startActiveSpan("receipt.process", async (span) => {
+      span.setAttributes({
+        "messaging.system": "rabbitmq",
+        "messaging.destination.name": receiptExchangeName,
+        "messaging.rabbitmq.routing_key": receiptRoutingKey,
+      });
+      try {
+        await sendReceipt(parseMessage(message.content));
+        channel.ack(message);
+        span.setStatus({ code: SpanStatusCode.OK });
+      } catch (error) {
+        console.error("Receipt delivery failed; message will be retried", error);
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        channel.nack(message, false, true);
+      } finally {
+        span.end();
+      }
+    });
   });
 
   const close = async () => {
