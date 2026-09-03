@@ -18,8 +18,14 @@ const aliases: Record<string, string[]> = {
   expectedPrice: ["expected_price", "expectedPrice", "expectedprice"],
   quantity: ["quantity", "defaultQuantity", "default_quantity", "defaultquantity"],
 };
-const attr = (items: readonly Attribute[], key: string) =>
-  items.find((item) => (aliases[key] ?? [key]).includes(item.attributeKey))?.value ?? "";
+const attr = (items: readonly Attribute[], key: string) => {
+  const keys = aliases[key] ?? [key];
+  for (const attributeKey of keys) {
+    const value = items.find((item) => item.attributeKey === attributeKey)?.value;
+    if (value !== undefined) return value;
+  }
+  return "";
+};
 const lineTotal = (attributes: readonly Attribute[]) => {
   const actualValue = attr(attributes, "actualPrice");
   const actual = Number(actualValue);
@@ -33,6 +39,13 @@ const lineTotal = (attributes: readonly Attribute[]) => {
   const quantity = Number(attr(attributes, "quantity"));
   return (Number.isFinite(price) ? price : 0) *
     (Number.isFinite(quantity) && quantity > 0 ? quantity : 1);
+};
+const expectedLineTotal = (attributes: readonly Attribute[]) => {
+  const expectedValue = attr(attributes, "expectedPrice");
+  const expected = Number(expectedValue);
+  const quantity = Number(attr(attributes, "quantity"));
+  if (!expectedValue || !Number.isFinite(expected) || expected < 0) return 0;
+  return expected * (Number.isFinite(quantity) && quantity > 0 ? quantity : 1);
 };
 
 const todayForDateInput = () => {
@@ -152,6 +165,7 @@ export default async function ListDetailPage({
   const cart = list.carts[0];
   const cartItems = cart?.items ?? [];
   const total = cartItems.reduce((sum, item) => sum + lineTotal(item.attributes), 0);
+  const expectedTotal = openItems.reduce((sum, item) => sum + expectedLineTotal(item.attributes), 0);
 
   return (
     <main className="app-shell">
@@ -285,46 +299,62 @@ export default async function ListDetailPage({
             ))}
           </section>
 
-          <aside className="cart-card">
-            <p className="eyebrow">ACTIVE CART</p>
-            {cartItems.length ? (
-              <>
-                <form action={checkoutCart} className="stack-form">
-                  <input type="hidden" name="listId" value={id} />
-                  <input type="hidden" name="cartId" value={cart.id} />
-                  <TextField select name="storeId" label="Store" defaultValue={cart.storeId ?? ""}>
-                    <MenuItem value="">Choose a store</MenuItem>
-                    {list.household.stores.map((store) => (
-                      <MenuItem key={store.id} value={store.id}>{store.name}</MenuItem>
-                    ))}
-                  </TextField>
-                  <TextField type="date" name="purchasedAt" label="Purchased at" defaultValue={todayForDateInput()} slotProps={{ inputLabel: { shrink: true } }} />
-                  <TextField
-                    key={total}
-                    name="totalPrice"
-                    type="number"
-                    label="Total price"
-                    defaultValue={total > 0 ? total.toString() : ""}
-                    placeholder="Total price"
-                    slotProps={{ htmlInput: { inputMode: "decimal", min: 0, step: 0.01 } }}
-                  />
-                  <TextField name="notes" placeholder="Notes" label="Notes" multiline minRows={2} />
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="secondary"
-                    type="submit"
-                    sx={{ mt: 1 }}
-                  >
-                    Checkout <span>→</span>
-                  </Button>
-                </form>
-              </>
-            ) : (
-              <div className="cart-empty">
-                <span>🛒</span><p>Check an item to start your cart.</p>
+          <aside className="detail-sidebar">
+            <section className="to-get-card" aria-labelledby="to-get-summary-heading">
+              <p className="eyebrow">TO GET</p>
+              <div className="to-get-summary" id="to-get-summary-heading">
+                <div>
+                  <strong>{openItems.length}</strong>
+                  <span>{openItems.length === 1 ? "item" : "items"}</span>
+                </div>
+                <div>
+                  <strong>₩{expectedTotal.toLocaleString("ko-KR")}</strong>
+                  <span>expected</span>
+                </div>
               </div>
-            )}
+            </section>
+
+            <section className="cart-card">
+              <p className="eyebrow">ACTIVE CART</p>
+              {cartItems.length ? (
+                <>
+                  <form action={checkoutCart} className="stack-form">
+                    <input type="hidden" name="listId" value={id} />
+                    <input type="hidden" name="cartId" value={cart.id} />
+                    <TextField select name="storeId" label="Store" defaultValue={cart.storeId ?? ""}>
+                      <MenuItem value="">Choose a store</MenuItem>
+                      {list.household.stores.map((store) => (
+                        <MenuItem key={store.id} value={store.id}>{store.name}</MenuItem>
+                      ))}
+                    </TextField>
+                    <TextField type="date" name="purchasedAt" label="Purchased at" defaultValue={todayForDateInput()} slotProps={{ inputLabel: { shrink: true } }} />
+                    <TextField
+                      key={total}
+                      name="totalPrice"
+                      type="number"
+                      label="Total price"
+                      defaultValue={total > 0 ? total.toString() : ""}
+                      placeholder="Total price"
+                      slotProps={{ htmlInput: { inputMode: "decimal", min: 0, step: 0.01 } }}
+                    />
+                    <TextField name="notes" placeholder="Notes" label="Notes" multiline minRows={2} />
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      color="secondary"
+                      type="submit"
+                      sx={{ mt: 1 }}
+                    >
+                      Checkout <span>→</span>
+                    </Button>
+                  </form>
+                </>
+              ) : (
+                <div className="cart-empty">
+                  <span>🛒</span><p>Check an item to start your cart.</p>
+                </div>
+              )}
+            </section>
           </aside>
         </div>
       </div>

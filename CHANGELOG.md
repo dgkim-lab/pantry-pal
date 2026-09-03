@@ -4,6 +4,8 @@
 
 Future changes will be listed here.
 
+- Added a concise shopping-list detail summary for items still to get and their total expected price.
+
 ## [0.2.0] - 2026-09-03
 
 - Added household creation and household switching.
