@@ -6,6 +6,9 @@ Future changes will be listed here.
 
 - Added a concise shopping-list detail summary for items still to get and their total expected price.
 - Ordered shopping-list detail items alphabetically in both the “to get” and in-cart sections.
+- Added downloadable PDF purchase receipts with embedded Korean font support.
+- Added RabbitMQ exchange-based receipt delivery and a standalone SMTP email worker.
+- Documented local receipt testing and GitOps deployment requirements for the worker.
 
 ## [0.2.0] - 2026-09-03
 

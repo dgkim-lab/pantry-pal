@@ -62,6 +62,14 @@ export default async function HistoryPage() {
                     ? "₩" + Number(purchase.totalPrice).toLocaleString("ko-KR")
                     : "—"}
                 </b>
+                <Button
+                  component="a"
+                  href={`/api/purchases/${purchase.id}/receipt`}
+                  variant="outlined"
+                  size="small"
+                >
+                  Download receipt
+                </Button>
               </div>
               <div className="purchase-items">
                 {purchase.items.map((item) => (

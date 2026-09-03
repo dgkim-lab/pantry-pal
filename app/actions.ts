@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { randomUUID } from "node:crypto";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { publishReceiptMessage } from "@/lib/receipt-queue";
 
 type ItemAttribute = { attributeKey: string; value: string; valueType: "TEXT" | "NUMBER" | "BOOLEAN" };
 
@@ -469,7 +470,7 @@ export async function checkoutCart(formData: FormData) {
   const cart = await prisma.cart.findFirst({ where: { id: cartId, listId, householdId: membership.householdId, status: "ACTIVE" }, include: { items: { include: { attributes: true } } } });
   if (!cart || cart.items.length === 0) return;
   const purchasedAt = new Date(String(formData.get("purchasedAt") || new Date().toISOString()));
-  await prisma.$transaction(async (tx) => {
+  const purchaseId = await prisma.$transaction(async (tx) => {
     const purchase = await tx.purchase.create({ data: { householdId: membership.householdId, cartId: cart.id, storeId: optionalValue(formData, "storeId") || cart.storeId, purchasedAt: Number.isNaN(purchasedAt.getTime()) ? new Date() : purchasedAt, currency: String(formData.get("currency") || process.env.DEFAULT_CURRENCY || "KRW"), totalPrice: optionalValue(formData, "totalPrice"), notes: optionalValue(formData, "notes") } });
     for (const item of cart.items) {
       const purchaseItem = await tx.purchaseItem.create({ data: { purchaseId: purchase.id, cartItemId: item.id, masterItemId: item.masterItemId, name: item.name } });
@@ -478,7 +479,10 @@ export async function checkoutCart(formData: FormData) {
     }
     await tx.cart.update({ where: { id: cart.id }, data: { status: "CHECKED_OUT", checkedOutAt: new Date() } });
     await tx.shoppingListItem.updateMany({ where: { id: { in: cart.items.flatMap((item) => item.listItemId ? [item.listItemId] : []) } }, data: { status: "PURCHASED" } });
+    return purchase.id;
   });
+  const session = await auth();
+  if (session?.user?.email) await publishReceiptMessage({ recipient: session.user.email, purchaseId });
   revalidatePath(`/lists/${listId}`); revalidatePath("/history");
 }
 
