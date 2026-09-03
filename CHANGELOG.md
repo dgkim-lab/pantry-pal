@@ -9,6 +9,7 @@ Future changes will be listed here.
 - Added downloadable PDF purchase receipts with embedded Korean font support.
 - Added RabbitMQ exchange-based receipt delivery and a standalone SMTP email worker.
 - Documented local receipt testing and GitOps deployment requirements for the worker.
+- Added purchase deletion from history with an explicit confirmation dialog.
 
 ## [0.2.0] - 2026-09-03
 

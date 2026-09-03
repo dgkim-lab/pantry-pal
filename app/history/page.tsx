@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { buyAgain } from "@/app/actions";
 import { SiteHeader } from "@/app/components/site-header";
 import { getActiveMembership } from "@/lib/household";
+import { PurchaseDeleteButton } from "@/app/components/purchase-delete-button";
 
 const attributeAliases: Record<string, string[]> = {
   actualPrice: ["actual_price", "actualPrice", "actualprice"],
@@ -70,6 +71,7 @@ export default async function HistoryPage() {
                 >
                   Download receipt
                 </Button>
+                <PurchaseDeleteButton purchaseId={purchase.id} />
               </div>
               <div className="purchase-items">
                 {purchase.items.map((item) => (

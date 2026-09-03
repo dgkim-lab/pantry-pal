@@ -496,3 +496,12 @@ export async function buyAgain(formData: FormData) {
   await prisma.shoppingListItem.create({ data: { listId, masterItemId: source.masterItemId, name: source.name, attributes: { create: source.attributes.map((attribute) => ({ attributeKey: ["actualPrice", "actual_price", "actualprice"].includes(attribute.attributeKey) ? "expected_price" : attribute.attributeKey, value: attribute.value, valueType: attribute.valueType })) } } });
   revalidatePath(`/lists/${listId}`);
 }
+
+export async function deletePurchase(formData: FormData) {
+  const membership = await getHouseholdMembership();
+  if (membership.role === "VIEWER") throw new Error("Viewers cannot delete purchases");
+  const purchaseId = String(formData.get("purchaseId") ?? "");
+  if (!purchaseId) return;
+  await prisma.purchase.deleteMany({ where: { id: purchaseId, householdId: membership.householdId } });
+  revalidatePath("/history");
+}
