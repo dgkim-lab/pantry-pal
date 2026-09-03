@@ -482,7 +482,15 @@ export async function checkoutCart(formData: FormData) {
     return purchase.id;
   });
   const session = await auth();
-  if (session?.user?.email) await publishReceiptMessage({ recipient: session.user.email, purchaseId });
+  if (session?.user?.email) {
+    try {
+      await publishReceiptMessage({ recipient: session.user.email, purchaseId });
+    } catch (error) {
+      // Receipt delivery is asynchronous; RabbitMQ downtime must not make a
+      // successful checkout look like it failed to the user.
+      console.error("Purchase completed but receipt message could not be published", error);
+    }
+  }
   revalidatePath(`/lists/${listId}`); revalidatePath("/history");
 }
 
