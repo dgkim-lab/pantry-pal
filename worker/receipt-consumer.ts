@@ -1,3 +1,4 @@
+import "dotenv/config";
 import amqp from "amqplib";
 import nodemailer from "nodemailer";
 import { receiptExchangeName, receiptQueueName, receiptRoutingKey, type ReceiptMessage } from "@/lib/receipt-queue";
