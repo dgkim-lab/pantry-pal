@@ -147,11 +147,11 @@ export default async function ListDetailPage({
       items: {
         where: { status: { in: ["OPEN", "IN_CART"] } },
         include: { attributes: true },
-        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ status: "asc" }, { name: "asc" }],
       },
       carts: {
         where: { status: "ACTIVE" },
-        include: { items: { include: { attributes: true } } },
+        include: { items: { include: { attributes: true }, orderBy: { name: "asc" } } },
         take: 1,
       },
       household: {

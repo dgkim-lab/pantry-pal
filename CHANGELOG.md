@@ -5,6 +5,7 @@
 Future changes will be listed here.
 
 - Added a concise shopping-list detail summary for items still to get and their total expected price.
+- Ordered shopping-list detail items alphabetically in both the “to get” and in-cart sections.
 
 ## [0.2.0] - 2026-09-03
 
