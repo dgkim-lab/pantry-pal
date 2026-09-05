@@ -16,6 +16,10 @@ Pantry Pal is an online-first, installable grocery and pantry companion for mobi
 
 ![Active cart view](images/image3.png)
 
+### Receipt
+
+![Receipt](images/receipt.jpeg)
+
 ## Product documents
 
 - [Product requirements](docs/product-requirements.md)
