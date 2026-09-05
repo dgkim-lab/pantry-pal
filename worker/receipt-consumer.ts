@@ -10,6 +10,8 @@ const receiptApiUrl = (process.env.RECEIPT_API_URL ?? "http://localhost:3000").r
 const internalToken = process.env.RECEIPT_INTERNAL_TOKEN;
 const tracer = trace.getTracer("pantry-pal.receipt-worker");
 
+class NonRetryableReceiptError extends Error {}
+
 if (!internalToken) throw new Error("RECEIPT_INTERNAL_TOKEN is required");
 if (!process.env.SMTP_HOST || !process.env.SMTP_FROM) throw new Error("SMTP_HOST and SMTP_FROM are required");
 
@@ -35,7 +37,13 @@ async function sendReceipt(message: ReceiptMessage) {
         headers: { Authorization: `Bearer ${internalToken}` },
       });
       span.setAttribute("http.response.status_code", response.status);
-      if (!response.ok) throw new Error(`Receipt API returned ${response.status}`);
+      if (!response.ok) {
+        const error = new Error(`Receipt API returned ${response.status}`);
+        if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+          throw new NonRetryableReceiptError(error.message);
+        }
+        throw error;
+      }
       const result = Buffer.from(await response.arrayBuffer());
       span.setAttribute("receipt.pdf.size_bytes", result.length);
       span.setStatus({ code: SpanStatusCode.OK });
@@ -92,10 +100,15 @@ async function main() {
         channel.ack(message);
         span.setStatus({ code: SpanStatusCode.OK });
       } catch (error) {
-        console.error("Receipt delivery failed; message will be retried", error);
+        const retryable = !(error instanceof NonRetryableReceiptError);
+        console.error(`Receipt delivery failed; message will ${retryable ? "be retried" : "be acknowledged and dropped"}`, error);
         span.recordException(error instanceof Error ? error : new Error(String(error)));
         span.setStatus({ code: SpanStatusCode.ERROR });
-        channel.nack(message, false, true);
+        if (!retryable) {
+          channel.ack(message);
+        } else {
+          channel.nack(message, false, true);
+        }
       } finally {
         span.end();
       }
