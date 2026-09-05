@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { randomUUID } from "node:crypto";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { publishReceiptMessage } from "@/lib/receipt-queue";
+import { publishPrintMessage, publishReceiptMessage } from "@/lib/receipt-queue";
 
 type ItemAttribute = { attributeKey: string; value: string; valueType: "TEXT" | "NUMBER" | "BOOLEAN" };
 
@@ -491,7 +491,22 @@ export async function checkoutCart(formData: FormData) {
       console.error("Purchase completed but receipt message could not be published", error);
     }
   }
+  try {
+    await publishPrintMessage({ purchaseId });
+  } catch (error) {
+    // Printing is asynchronous and must not make a completed checkout fail.
+    console.error("Purchase completed but print message could not be published", error);
+  }
   revalidatePath(`/lists/${listId}`); revalidatePath("/history");
+}
+
+export async function printReceipt(formData: FormData) {
+  const purchaseId = String(formData.get("purchaseId") ?? "");
+  if (!purchaseId) return;
+  const membership = await getHouseholdMembership();
+  const purchase = await prisma.purchase.findFirst({ where: { id: purchaseId, householdId: membership.householdId }, select: { id: true } });
+  if (!purchase) throw new Error("Purchase not found");
+  await publishPrintMessage({ purchaseId: purchase.id });
 }
 
 export async function buyAgain(formData: FormData) {

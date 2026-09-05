@@ -14,11 +14,15 @@ The application is a single Next.js service:
 The browser must have network access for application reads and writes in the initial release.
 
 Receipt delivery is asynchronous. Checkout publishes a persistent RabbitMQ
-message containing only `recipient` and `purchaseId` to the durable
+email message containing `recipient` and `purchaseId` to the durable
 `pantry-pal.receipts` direct exchange with the `receipt.email` routing key. A
 separate receipt worker consumes a durable bound queue, fetches the PDF receipt
 endpoint with the internal receipt token, and sends the PDF as an SMTP email
-attachment. Failed delivery is retried by RabbitMQ until the worker succeeds.
+attachment. Checkout also publishes a print message containing `purchaseId`
+with the `receipt.print` routing key. The separate Python print worker fetches
+the JSON receipt data, rasterizes it with the bundled Noto Sans Korean font,
+and sends the PNG to the Xprinter over its network ESC/POS port. Failed
+delivery is retried by RabbitMQ until the worker succeeds.
 
 If RabbitMQ is unavailable while checkout is finishing, the purchase still
 completes normally. The publisher records the connection or publish exception

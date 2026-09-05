@@ -39,8 +39,14 @@ may use a ConfigMap:
 - `RABBITMQ_RECEIPT_EXCHANGE` (default: `pantry-pal.receipts`, durable direct exchange)
 - `RABBITMQ_RECEIPT_QUEUE` (default: `pantry-pal.receipt-worker`, durable worker queue)
 - `RABBITMQ_RECEIPT_ROUTING_KEY` (default: `receipt.email`)
+- `RABBITMQ_PRINT_QUEUE` (default: `pantry-pal.print-worker`)
+- `RABBITMQ_PRINT_ROUTING_KEY` (default: `receipt.print`)
 - `RECEIPT_INTERNAL_TOKEN`
 - `RECEIPT_API_URL` (the in-cluster URL of the web Service)
+- `XPRINTER_HOST`
+- `XPRINTER_PORT` (default: `9100`)
+- `XPRINTER_PRINT_WIDTH` (default: `580`)
+- `RECEIPT_PRINT_FONT_PATH` (default: `/app/public/fonts/NotoSansKR-subset.ttf`)
 - `SMTP_HOST`
 - `SMTP_PORT`
 - `SMTP_SECURE`
@@ -72,6 +78,13 @@ The GitOps repository should define:
   `npm run worker:receipts`. It must receive the RabbitMQ, receipt API, token,
   and SMTP environment variables, and should use at least one replica with
   graceful termination so in-flight messages can be acknowledged or retried.
+- A separate print-worker Deployment using the same image, with command
+  `npm run worker:print`. It must receive the RabbitMQ, receipt API, internal
+  token, and Xprinter host/port settings. It needs network access to the
+  Xprinter's raw ESC/POS TCP port (normally 9100). Set
+  `OTEL_SERVICE_NAME=pantry-pal-receipt-print-worker` and the same OTLP
+  collector variables on this Deployment; the Python worker exports spans
+  over OTLP/HTTP.
 - RabbitMQ infrastructure (or a managed RabbitMQ service), a durable direct
   exchange and bound worker queue named by the receipt variables, and network
   policy allowing the web and receipt-worker Deployments to connect to it.

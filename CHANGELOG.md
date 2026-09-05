@@ -4,6 +4,8 @@
 
 Future changes will be listed here.
 
+## [0.3.0] - 2026-09-05
+
 - Added a concise shopping-list detail summary for items still to get and their total expected price.
 - Ordered shopping-list detail items alphabetically in both the “to get” and in-cart sections.
 - Added downloadable PDF purchase receipts with embedded Korean font support.
@@ -12,6 +14,11 @@ Future changes will be listed here.
 - Added purchase deletion from history with an explicit confirmation dialog.
 - Added receipt publisher tracing and graceful checkout behavior when RabbitMQ is unavailable.
 - Added receipt-worker spans for RabbitMQ processing, PDF retrieval, and SMTP delivery.
+- Added a separate Python Xprinter print worker with Hangul PNG rendering, QR-coded receipt detail links, and RabbitMQ retries.
+- Added receipt detail pages with print/download actions and concise right-aligned quantity and price columns.
+- Added a standalone real-receipt printer test that previews text and saves its PNG under `/tmp`.
+- Added Python OpenTelemetry spans for receipt fetch, rendering, ESC/POS printing, and message processing.
+- Added Python environment, cache, and virtual-environment exclusions to `.gitignore`.
 
 ## [0.2.0] - 2026-09-03
 

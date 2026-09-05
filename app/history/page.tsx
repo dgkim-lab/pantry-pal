@@ -65,11 +65,11 @@ export default async function HistoryPage() {
                 </b>
                 <Button
                   component="a"
-                  href={`/api/purchases/${purchase.id}/receipt`}
+                  href={`/receipts/${purchase.id}`}
                   variant="outlined"
                   size="small"
                 >
-                  Download receipt
+                  View receipt
                 </Button>
                 <PurchaseDeleteButton purchaseId={purchase.id} />
               </div>

@@ -1,6 +1,6 @@
 {
   "name": "pantry-pal",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "next start",
     "worker:receipts": "tsx worker/receipt-consumer.ts",
+    "worker:print": "python3 worker/receipt-print-consumer.py",
+    "printer:test": "python3 worker/test-xprinter.py",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

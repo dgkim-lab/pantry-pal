@@ -30,20 +30,44 @@ export async function GET(_request: Request, context: RouteContext) {
   });
   if (!purchase) return Response.json({ error: "Purchase not found" }, { status: 404 });
 
-  const pdf = createPurchaseReceiptPdf({
+  const receipt = {
     id: purchase.id,
     householdName: purchase.household.name,
     storeName: purchase.store?.name ?? "Unassigned store",
-    purchasedAt: purchase.purchasedAt,
+    purchasedAt: purchase.purchasedAt.toISOString(),
     currency: purchase.currency,
     totalPrice: purchase.totalPrice?.toString() ?? null,
     notes: purchase.notes,
-    items: purchase.items.map((item) => ({
-      name: item.name,
-      quantity: attributeValue(item.attributes, "quantity"),
-      unit: attributeValue(item.attributes, "unit"),
-      price: attributeValue(item.attributes, "actualPrice"),
-    })),
+    items: purchase.items.map((item) => {
+      const quantity = attributeValue(item.attributes, "quantity");
+      const unitPrice = attributeValue(item.attributes, "actualPrice");
+      const quantityNumber = quantity === undefined ? NaN : Number(quantity);
+      const unitPriceNumber = unitPrice === undefined ? NaN : Number(unitPrice);
+      return {
+        name: item.name,
+        quantity,
+        unit: attributeValue(item.attributes, "unit"),
+        unitPrice,
+        price: Number.isFinite(quantityNumber) && Number.isFinite(unitPriceNumber)
+          ? String(quantityNumber * unitPriceNumber)
+          : unitPrice,
+      };
+    }),
+  };
+
+  if (_request.headers.get("accept")?.includes("application/json")) {
+    return Response.json(receipt, { headers: { "Cache-Control": "private, no-store" } });
+  }
+
+  const pdf = createPurchaseReceiptPdf({
+    id: receipt.id,
+    householdName: receipt.householdName,
+    storeName: receipt.storeName,
+    purchasedAt: purchase.purchasedAt,
+    currency: receipt.currency,
+    totalPrice: receipt.totalPrice,
+    notes: receipt.notes,
+    items: receipt.items,
   });
 
   return new Response(pdf, {
