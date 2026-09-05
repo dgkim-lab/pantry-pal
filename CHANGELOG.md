@@ -4,6 +4,11 @@
 
 Future changes will be listed here.
 
+## [0.3.1] - 2026-09-05
+
+- Fixed the production image build for the Python print worker on Alpine Linux.
+- Added Docker build-context exclusions for local dependencies, caches, and environments.
+
 ## [0.3.0] - 2026-09-05
 
 - Added a concise shopping-list detail summary for items still to get and their total expected price.

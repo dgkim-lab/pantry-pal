@@ -13,7 +13,18 @@ RUN npx prisma generate && npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
-RUN apk add --no-cache python3 py3-pip && python3 -m venv /opt/print-venv
+RUN apk add --no-cache \
+    build-base \
+    freetype-dev \
+    jpeg-dev \
+    lcms2-dev \
+    openjpeg-dev \
+    python3 \
+    python3-dev \
+    py3-pip \
+    tiff-dev \
+    zlib-dev \
+    && python3 -m venv /opt/print-venv
 ARG APP_VERSION=dev
 ENV NODE_ENV=production \
     APP_VERSION=${APP_VERSION}
