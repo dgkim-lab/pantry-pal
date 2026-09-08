@@ -511,12 +511,32 @@ export async function printReceipt(formData: FormData) {
 
 export async function buyAgain(formData: FormData) {
   const listId = String(formData.get("listId"));
-  const purchaseItemId = String(formData.get("purchaseItemId"));
+  const purchaseItemIds = [...new Set(formData.getAll("purchaseItemId").map(String).filter(Boolean))];
+  if (!listId || purchaseItemIds.length === 0) return;
   const membership = await getMembership(listId);
   if (membership.role === "VIEWER") throw new Error("Viewers cannot edit lists");
-  const source = await prisma.purchaseItem.findFirst({ where: { id: purchaseItemId, purchase: { householdId: membership.householdId } }, include: { attributes: true } });
-  if (!source) return;
-  await prisma.shoppingListItem.create({ data: { listId, masterItemId: source.masterItemId, name: source.name, attributes: { create: source.attributes.map((attribute) => ({ attributeKey: ["actualPrice", "actual_price", "actualprice"].includes(attribute.attributeKey) ? "expected_price" : attribute.attributeKey, value: attribute.value, valueType: attribute.valueType })) } } });
+  const sources = await prisma.purchaseItem.findMany({ where: { id: { in: purchaseItemIds }, purchase: { householdId: membership.householdId } }, include: { attributes: true } });
+  const existingItems = await prisma.shoppingListItem.findMany({
+    where: { listId, status: { in: ["OPEN", "IN_CART"] } },
+    select: { name: true, masterItemId: true },
+  });
+  const existingMasterIds = new Set(existingItems.flatMap((item) => item.masterItemId ? [item.masterItemId] : []));
+  const existingNames = new Set(existingItems.map((item) => item.name.toLocaleLowerCase().replace(/\s+/g, " ").trim()));
+  const sourcesToAdd = sources.filter((source) => {
+    const normalizedName = source.name.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+    if ((source.masterItemId && existingMasterIds.has(source.masterItemId)) || existingNames.has(normalizedName)) return false;
+    if (source.masterItemId) existingMasterIds.add(source.masterItemId);
+    existingNames.add(normalizedName);
+    return true;
+  });
+  await prisma.$transaction(sourcesToAdd.map((source) => prisma.shoppingListItem.create({
+    data: {
+      listId,
+      masterItemId: source.masterItemId,
+      name: source.name,
+      attributes: { create: source.attributes.map((attribute) => ({ attributeKey: ["actualPrice", "actual_price", "actualprice"].includes(attribute.attributeKey) ? "expected_price" : attribute.attributeKey, value: attribute.value, valueType: attribute.valueType })) },
+    },
+  })));
   revalidatePath(`/lists/${listId}`);
 }
 

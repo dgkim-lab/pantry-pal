@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Improved mobile purchase-history cards with responsive headings and selectable purchase items.
+- Added bulk add-to-list actions for purchase history with duplicate protection.
+
 Future changes will be listed here.
 
 ## [0.3.1] - 2026-09-05

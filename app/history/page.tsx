@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { Button, MenuItem, TextField } from "@mui/material";
+import { Button } from "@mui/material";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { buyAgain } from "@/app/actions";
 import { SiteHeader } from "@/app/components/site-header";
 import { getActiveMembership } from "@/lib/household";
 import { PurchaseDeleteButton } from "@/app/components/purchase-delete-button";
+import { PurchaseCheckbox, PurchaseSelection } from "@/app/components/purchase-selection";
 
 const attributeAliases: Record<string, string[]> = {
   actualPrice: ["actual_price", "actualPrice", "actualprice"],
@@ -46,9 +46,13 @@ export default async function HistoryPage() {
         <p className="muted page-intro">
           Purchase snapshots remain unchanged when catalog attributes are edited.
         </p>
-        <section className="history-list">
-          {purchases.map((purchase) => (
-            <article className="purchase-card" key={purchase.id}>
+        <PurchaseSelection
+          items={purchases.flatMap((purchase) => purchase.items.map((item) => ({ id: item.id, name: item.name })))}
+          lists={lists}
+        >
+          <section className="history-list">
+            {purchases.map((purchase) => (
+              <article className="purchase-card" key={purchase.id}>
               <div className="purchase-heading">
                 <div>
                   <strong>{purchase.store?.name ?? "Unassigned store"}</strong>
@@ -73,48 +77,35 @@ export default async function HistoryPage() {
                 </Button>
                 <PurchaseDeleteButton purchaseId={purchase.id} />
               </div>
-              <div className="purchase-items">
-                {purchase.items.map((item) => (
-                  <div className="purchase-line" key={item.id}>
-                    <span>
-                      {item.name}
-                      {attr(item.attributes, "quantity")
-                        ? " · " + attr(item.attributes, "quantity") + " " + attr(item.attributes, "unit")
-                        : ""}
-                    </span>
-                    <span>
-                      {attr(item.attributes, "actualPrice")
-                        ? "₩" + attr(item.attributes, "actualPrice")
-                        : ""}
-                    </span>
-                    <form action={buyAgain}>
-                      <input type="hidden" name="purchaseItemId" value={item.id} />
-                      <label className="buy-again-label">
-                        Add to
-                        <TextField select name="listId" defaultValue={lists[0]?.id ?? ""} label="Add to" size="small">
-                          <MenuItem value="">list…</MenuItem>
-                          {lists.map((list) => (
-                            <MenuItem key={list.id} value={list.id}>
-                              {list.name}
-                            </MenuItem>
-                          ))}
-                        </TextField>
-                      </label>
-                      <Button variant="outlined" size="small" type="submit">Buy again</Button>
-                    </form>
-                  </div>
-                ))}
+                <div className="purchase-items">
+                  {purchase.items.map((item) => (
+                    <div className="purchase-line" key={item.id}>
+                      <PurchaseCheckbox item={{ id: item.id, name: item.name }} />
+                      <span>
+                        {item.name}
+                        {attr(item.attributes, "quantity")
+                          ? " · " + attr(item.attributes, "quantity") + " " + attr(item.attributes, "unit")
+                          : ""}
+                      </span>
+                      <span>
+                        {attr(item.attributes, "actualPrice")
+                          ? "₩" + attr(item.attributes, "actualPrice")
+                          : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+            {purchases.length === 0 && (
+              <div className="empty-state">
+                <span>✦</span>
+                <h2>No purchases yet</h2>
+                <p>Checked-out carts will appear here.</p>
               </div>
-            </article>
-          ))}
-          {purchases.length === 0 && (
-            <div className="empty-state">
-              <span>✦</span>
-              <h2>No purchases yet</h2>
-              <p>Checked-out carts will appear here.</p>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+        </PurchaseSelection>
       </div>
     </main>
   );
