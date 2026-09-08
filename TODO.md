@@ -30,8 +30,8 @@ This backlog tracks work remaining after the initial list → cart vertical slic
 
 - [x] Add production PWA icons and favicon assets.
 - [ ] Add service-worker caching for the app shell and static assets.
-- [ ] Add install guidance for iPhone Safari and desktop browsers.
-- [ ] Keep data mutations online-only; show a clear offline/unavailable state.
+- [x] Add install guidance for iPhone Safari and desktop browsers.
+- [x] Keep data mutations online-only; show a clear offline/unavailable state.
 - [ ] Add pending, success, and error feedback for server actions.
 - [ ] Add empty, loading, and not-found states for every screen.
 - [ ] Improve keyboard navigation, focus states, labels, and screen-reader behavior.

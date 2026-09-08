@@ -16,6 +16,7 @@ import { SignOutButton } from "@/app/components/sign-out-button";
 import { RefreshButton } from "@/app/components/refresh-button";
 import { ClientErrorTestButton } from "@/app/components/client-error-test-button";
 import { HouseholdSelector } from "@/app/components/household-selector";
+import { InstallAppGuide } from "@/app/components/install-app-guide";
 
 const links = [
   ["Lists", "/lists"],
@@ -54,6 +55,7 @@ export function MobileNavigation({ households = [], activeHouseholdId }: { house
           </List>
           <HouseholdSelector households={households} activeHouseholdId={activeHouseholdId} />
           <Divider />
+          <InstallAppGuide />
           <Stack sx={{ p: 2 }}>
             <ClientErrorTestButton />
             <RefreshButton />

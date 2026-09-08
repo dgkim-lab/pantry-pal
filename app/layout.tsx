@@ -3,6 +3,7 @@ import "./globals.css";
 import { SiteFooter } from "@/app/components/site-footer";
 import { MuiThemeProvider } from "@/app/components/mui-theme-provider";
 import { ClientErrorReporter } from "@/app/components/client-error-reporter";
+import { OfflineBanner } from "@/app/components/offline-banner";
 
 export const metadata: Metadata = {
   title: "Pantry Pal",
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body>
         <MuiThemeProvider>
+          <OfflineBanner />
           <ClientErrorReporter>{children}</ClientErrorReporter>
           <SiteFooter />
         </MuiThemeProvider>

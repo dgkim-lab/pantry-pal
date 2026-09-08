@@ -7,6 +7,7 @@ import { RefreshButton } from "@/app/components/refresh-button";
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { ClientErrorTestButton } from "@/app/components/client-error-test-button";
 import { HouseholdSelector } from "@/app/components/household-selector";
+import { InstallAppGuide } from "@/app/components/install-app-guide";
 
 type HouseholdOption = { householdId: string; household: { name: string } };
 
@@ -60,6 +61,7 @@ export function SiteHeader({ name, listTitle }: { name?: string | null; listTitl
           <Button href="/households" color="inherit" size="small">Household</Button>
           <HouseholdSelector households={households} activeHouseholdId={activeHouseholdId} />
           <ClientErrorTestButton />
+          <InstallAppGuide compact />
         </Stack>
         <Box sx={{ display: { xs: "none", lg: "block" } }}>
           <RefreshButton />
