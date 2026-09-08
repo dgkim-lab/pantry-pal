@@ -9,7 +9,7 @@ import {
   uncartItem, updateCartItem, updateList,
 } from "@/app/actions";
 import { SiteHeader } from "@/app/components/site-header";
-import { ItemCheckButton } from "@/app/components/item-check-button";
+import { OptimisticCartToggle } from "@/app/components/optimistic-cart-toggle";
 import { QuickAdd } from "@/app/components/quick-add";
 
 type Attribute = { attributeKey: string; value: string; valueType?: "TEXT" | "NUMBER" | "BOOLEAN" };
@@ -208,15 +208,10 @@ export default async function ListDetailPage({
             <div className="section-label"><span>TO GET</span><span>{openItems.length}</span></div>
             {openItems.map((item) => (
               <div className="item-block" key={item.id}>
-                <form action={checkListItem} className="item-row">
-                  <input type="hidden" name="listId" value={id} />
-                  <input type="hidden" name="itemId" value={item.id} />
-                  <ItemCheckButton checked={false} label={"Move " + item.name + " to cart"} />
-                  <div className="item-copy">
-                    <strong>{item.name}</strong>
-                    <ItemMeta attributes={item.attributes} />
-                  </div>
-                </form>
+                <OptimisticCartToggle action={checkListItem} listId={id} itemId={item.id} name={item.name} checked={false}>
+                  <strong>{item.name}</strong>
+                  <ItemMeta attributes={item.attributes} />
+                </OptimisticCartToggle>
                 <details className="item-edit">
                   <summary>Edit attributes</summary>
                   <AttributeRows listId={id} itemId={item.id} attributes={item.attributes} />
@@ -246,15 +241,10 @@ export default async function ListDetailPage({
             </div>
             {cartItems.map((item) => (
               <div className="item-block" key={item.id}>
-                <form action={uncartItem} className="item-row checked">
-                  <input type="hidden" name="listId" value={id} />
-                  <input type="hidden" name="cartItemId" value={item.id} />
-                  <ItemCheckButton checked label={"Remove " + item.name + " from cart"} />
-                  <div className="item-copy">
-                    <strong>{item.name}</strong>
-                    <ItemMeta attributes={item.attributes} />
-                  </div>
-                </form>
+                <OptimisticCartToggle action={uncartItem} listId={id} itemId={item.id} name={item.name} checked>
+                  <strong>{item.name}</strong>
+                  <ItemMeta attributes={item.attributes} />
+                </OptimisticCartToggle>
                 <details className="item-edit">
                   <summary>Edit attributes</summary>
                   <AttributeRows listId={id} itemId={item.id} attributes={item.attributes} cartItem />
