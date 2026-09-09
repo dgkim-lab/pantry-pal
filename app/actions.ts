@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { randomUUID } from "node:crypto";
+import packageJson from "../package.json";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { publishPrintMessage, publishReceiptMessage } from "@/lib/receipt-queue";
@@ -24,7 +25,7 @@ async function lookupOpenFoodFacts(barcode: string): Promise<{ found: boolean; n
     const fields = "product_name,brands,quantity,categories,countries,generic_name,ingredients_text,nutriscore_grade,nova_group,ecoscore_grade,image_front_url";
     const response = await fetch(`https://world.openfoodfacts.org/api/v3/product/${encodeURIComponent(barcode)}?product_type=all&fields=${fields}`, {
       cache: "no-store",
-      headers: { "User-Agent": "PantryPal/0.3.1 (barcode lookup)" },
+      headers: { "User-Agent": `PantryPal/${packageJson.version} (https://github.com/dgkim-lab/pantry-pal; barcode lookup)` },
       signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) return { found: false, name: "", attributes: [{ attributeKey: "barcode", value: barcode, valueType: "TEXT" }] };

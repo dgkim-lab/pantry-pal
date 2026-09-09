@@ -4,6 +4,7 @@
 
 Future changes will be listed here.
 
+- Updated the Open Food Facts `User-Agent` to use the package version and include the Pantry Pal repository URL.
 - Improved barcode lookup efficiency: Existing master-item barcode matches now skip the Open Food Facts API request.
 
 ## [0.4.0] - 2026-09-09
