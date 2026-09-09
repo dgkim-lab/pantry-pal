@@ -4,6 +4,8 @@
 
 Future changes will be listed here.
 
+- Improved barcode lookup efficiency: Existing master-item barcode matches now skip the Open Food Facts API request.
+
 ## [0.4.0] - 2026-09-09
 
 - **New feature: Added Open Food Facts barcode lookup and master-item registration.** Missing master items now show a registration modal with the fetched product name and attribute table, including the scanned barcode; unmatched products leave the name blank and show a red notification.

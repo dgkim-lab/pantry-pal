@@ -63,7 +63,10 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
       showToast(result.product.found);
       return;
     }
-    if (result?.openFoodFactsFound !== undefined) showToast(result.openFoodFactsFound);
+    if (result?.masterItemFound) {
+      setToast({ message: "Product found in master items", found: true });
+      window.setTimeout(() => setToast(null), 3200);
+    }
     setName("");
     setBarcode("");
     if (result?.cartItemId) router.replace(`${pathname}?highlightCartItem=${encodeURIComponent(result.cartItemId)}`);

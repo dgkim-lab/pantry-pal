@@ -145,8 +145,7 @@ export async function addListItem(formData: FormData) {
     cartItemId = cartItem.id;
   }
   revalidatePath(`/lists/${listId}`);
-  const openFoodFacts = barcode ? await lookupOpenFoodFacts(barcode) : null;
-  return { itemId: item.id, cartItemId, openFoodFactsFound: openFoodFacts?.found };
+  return { itemId: item.id, cartItemId, masterItemFound: Boolean(master) };
 }
 
 export async function registerMasterItem(formData: FormData) {
