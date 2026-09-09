@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { Button, MenuItem, TextField } from "@mui/material";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -7,6 +8,7 @@ import { deleteMasterAttribute, deleteMasterItem, saveMasterAttribute, saveMaste
 import { SiteHeader } from "@/app/components/site-header";
 import { CatalogCheckbox, CatalogSelection } from "@/app/components/catalog-selection";
 import { getActiveMembership } from "@/lib/household";
+import { barcodeImageDataUri } from "@/lib/barcode-image";
 
 const fields = (item?: {
   id: string;
@@ -78,8 +80,13 @@ export default async function CatalogPage() {
                 <Button color="error" type="submit">Delete item</Button>
               </form>
               <div className="attribute-list">
-                {item.attributes.map((attribute) => (
-                  <form action={saveMasterAttribute} key={attribute.id} className="editable-attribute-row">
+                {item.attributes.map((attribute) => {
+                  const barcodeImage = attribute.attributeKey.toLocaleLowerCase() === "barcode"
+                    ? barcodeImageDataUri(attribute.value)
+                    : null;
+                  return (
+                  <Fragment key={attribute.id}>
+                  <form action={saveMasterAttribute} className="editable-attribute-row">
                     <input type="hidden" name="masterItemId" value={item.id} />
                     <input type="hidden" name="attributeKey" value={attribute.attributeKey} />
                     <span className="attribute-name">{attribute.attributeKey}</span>
@@ -106,7 +113,14 @@ export default async function CatalogPage() {
                       <Button formAction={deleteMasterAttribute} color="error" type="submit">Delete</Button>
                     </div>
                   </form>
-                ))}
+                  {barcodeImage && (
+                    <div className="catalog-barcode-preview">
+                      <img src={barcodeImage} alt={`Barcode ${attribute.value}`} />
+                    </div>
+                  )}
+                  </Fragment>
+                  );
+                })}
               </div>
               <hr className="attribute-divider" />
               <form action={saveMasterAttribute} className="attribute-form custom-attribute-form">

@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added scannable barcode images beneath `barcode` attributes on catalog items, with support for EAN-8, UPC-A, EAN-13, and Code 128 values.
 - **New feature: Added camera barcode scanning with ZXing for fast in-store item entry.** Scanned barcodes are stored on master items through the existing attribute model, resolve existing catalog items, and add scanned items directly to the active cart; normal typed item entry remains a planning-list action.
 - Added an explicit camera-permission flow with retry handling for installed PWAs and mobile browsers.
 - Improved mobile purchase-history cards with responsive headings and selectable purchase items.
