@@ -61,18 +61,26 @@ export async function addListItem(formData: FormData) {
       create: { masterItemId: resolvedMaster.id, attributeKey: "barcode", value: barcode, valueType: "TEXT" },
     });
   }
-  const item = await prisma.shoppingListItem.create({
+  const existingOpenItem = addToCart
+    ? await prisma.shoppingListItem.findFirst({
+        where: { listId, status: "OPEN", masterItemId: resolvedMaster.id },
+        include: { attributes: true, list: { select: { defaultStoreId: true } } },
+        orderBy: { createdAt: "asc" },
+      })
+    : null;
+  const item = existingOpenItem ?? await prisma.shoppingListItem.create({
     data: {
       listId,
       masterItemId: resolvedMaster.id,
       name: resolvedMaster.name,
       attributes: { create: resolvedMaster.attributes.map((attribute) => ({ attributeKey: attribute.attributeKey, value: attribute.value, valueType: attribute.valueType })) },
     },
+    include: { attributes: true, list: { select: { defaultStoreId: true } } },
   });
   let cartItemId: string | null = null;
   if (addToCart) {
     const cart = await prisma.cart.findFirst({ where: { listId, householdId: membership.householdId, status: "ACTIVE" } }) ??
-      await prisma.cart.create({ data: { listId, householdId: membership.householdId, status: "ACTIVE" } });
+      await prisma.cart.create({ data: { listId, householdId: membership.householdId, storeId: item.list.defaultStoreId, status: "ACTIVE" } });
     const [cartItem] = await prisma.$transaction([
       prisma.cartItem.create({
         data: {
@@ -80,7 +88,7 @@ export async function addListItem(formData: FormData) {
           listItemId: item.id,
           masterItemId: item.masterItemId,
           name: item.name,
-          attributes: { create: resolvedMaster.attributes.map(({ attributeKey, value, valueType }) => ({ attributeKey, value, valueType })) },
+          attributes: { create: item.attributes.map(({ attributeKey, value, valueType }) => ({ attributeKey, value, valueType })) },
         },
       }),
       prisma.shoppingListItem.update({ where: { id: item.id }, data: { status: "IN_CART", checkedAt: new Date() } }),
