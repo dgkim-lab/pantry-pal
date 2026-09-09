@@ -2,19 +2,19 @@
 
 ## [Unreleased]
 
+Future changes will be listed here.
+
 ## [0.4.0] - 2026-09-09
 
-- Added a five-second highlight for newly carted barcode-scan items, with immediate highlight clearing when starting another scan.
-- Added scannable barcode images beneath `barcode` attributes on catalog items, with support for EAN-8, UPC-A, EAN-13, and Code 128 values.
 - **New feature: Added Open Food Facts barcode lookup and master-item registration.** Missing master items now show a registration modal with the fetched product name and attribute table, including the scanned barcode; unmatched products leave the name blank and show a red notification.
 - **New feature: Added a persisted “Automatically add after scanning” camera toggle.** Added master items now include `defaultQuantity` and `currency` attributes, with green/red notifications indicating whether Open Food Facts found the product.
+- Added a five-second highlight for newly carted barcode-scan items, with immediate highlight clearing when starting another scan.
+- Added scannable barcode images beneath `barcode` attributes on catalog items, with support for EAN-8, UPC-A, EAN-13, and Code 128 values.
 - **New feature: Added camera barcode scanning with ZXing for fast in-store item entry.** Scanned barcodes are stored on master items through the existing attribute model, resolve existing catalog items, and add scanned items directly to the active cart; normal typed item entry remains a planning-list action.
 - Added an explicit camera-permission flow with retry handling for installed PWAs and mobile browsers.
 - Improved mobile purchase-history cards with responsive headings and selectable purchase items.
 - Added bulk add-to-list actions for purchase history with duplicate protection.
 - Added optimistic cart checkbox feedback with pending states and transitions.
-
-Future changes will be listed here.
 
 ## [0.3.1] - 2026-09-05
 
