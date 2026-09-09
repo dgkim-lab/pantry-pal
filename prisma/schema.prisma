@@ -257,6 +257,7 @@ model MasterItemAttribute {
   masterItem   MasterItem         @relation(fields: [masterItemId], references: [id], onDelete: Cascade)
 
   @@unique([masterItemId, attributeKey])
+  @@index([attributeKey, value])
   @@map("master_item_attributes")
 }
 

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
+import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
 import {
   Button,
   Drawer,
@@ -14,11 +15,15 @@ import {
   Typography,
 } from "@mui/material";
 import { addListItem } from "@/app/actions";
+import { BarcodeScanner } from "@/app/components/barcode-scanner";
 
 type MasterItem = { id: string; name: string };
 
 export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[] }) {
   const [open, setOpen] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [barcode, setBarcode] = useState("");
   const [query, setQuery] = useState("");
   const filteredItems = useMemo(
     () => items.filter((item) => item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())),
@@ -30,15 +35,34 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
     setQuery("");
   }
 
+  function handleBarcode(value: string) {
+    setBarcode(value);
+    setName(value);
+    setScannerOpen(false);
+  }
+
+  async function submit(formData: FormData) {
+    await addListItem(formData);
+    setName("");
+    setBarcode("");
+  }
+
   return (
     <>
-      <form action={addListItem} className="quick-add">
+      <form action={submit} className="quick-add">
         <input type="hidden" name="listId" value={listId} />
+        <input type="hidden" name="barcode" value={barcode} />
+        <input type="hidden" name="addToCart" value={barcode ? "true" : "false"} />
         <IconButton type="button" color="secondary" aria-label="Choose an item from the catalog" onClick={() => setOpen(true)}>
           <AddIcon />
         </IconButton>
+        <IconButton type="button" color="secondary" aria-label="Scan a barcode" onClick={() => setScannerOpen(true)}>
+          <QrCodeScannerIcon />
+        </IconButton>
         <TextField
           name="name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
           placeholder="Add something to your list..."
           aria-label="Add something to your list"
           slotProps={{ htmlInput: { list: "master-items" } }}
@@ -75,6 +99,7 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
           </List>
         </Stack>
       </Drawer>
+      <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onDetected={handleBarcode} />
     </>
   );
 }

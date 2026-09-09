@@ -34,12 +34,33 @@ export async function addListItem(formData: FormData) {
   const listId = String(formData.get("listId"));
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
+  const barcode = String(formData.get("barcode") ?? "").trim().slice(0, 128);
+  const addToCart = formData.get("addToCart") === "true";
   const membership = await getMembership(listId);
   if (membership.role === "VIEWER") throw new Error("Viewers cannot edit lists");
 
   const normalizedName = name.toLocaleLowerCase().replace(/\s+/g, " ");
-  const master = await prisma.masterItem.findFirst({ where: { householdId: membership.householdId, normalizedName }, include: { attributes: true } });
-  const resolvedMaster = master ?? { ...(await prisma.masterItem.create({ data: { householdId: membership.householdId, createdById: membership.userId, name, normalizedName } })), attributes: [] };
+  const master = barcode
+    ? await prisma.masterItem.findFirst({ where: { householdId: membership.householdId, attributes: { some: { attributeKey: "barcode", value: barcode } } }, include: { attributes: true } })
+    : null;
+  const nameMaster = master ?? await prisma.masterItem.findFirst({ where: { householdId: membership.householdId, normalizedName }, include: { attributes: true } });
+  const resolvedMaster = nameMaster ?? await prisma.masterItem.create({
+    data: {
+      householdId: membership.householdId,
+      createdById: membership.userId,
+      name,
+      normalizedName,
+      ...(barcode ? { attributes: { create: { attributeKey: "barcode", value: barcode, valueType: "TEXT" } } } : {}),
+    },
+    include: { attributes: true },
+  });
+  if (barcode && !resolvedMaster.attributes.some((attribute) => attribute.attributeKey === "barcode" && attribute.value === barcode)) {
+    await prisma.masterItemAttribute.upsert({
+      where: { masterItemId_attributeKey: { masterItemId: resolvedMaster.id, attributeKey: "barcode" } },
+      update: { value: barcode, valueType: "TEXT" },
+      create: { masterItemId: resolvedMaster.id, attributeKey: "barcode", value: barcode, valueType: "TEXT" },
+    });
+  }
   const item = await prisma.shoppingListItem.create({
     data: {
       listId,
@@ -48,6 +69,22 @@ export async function addListItem(formData: FormData) {
       attributes: { create: resolvedMaster.attributes.map((attribute) => ({ attributeKey: attribute.attributeKey, value: attribute.value, valueType: attribute.valueType })) },
     },
   });
+  if (addToCart) {
+    const cart = await prisma.cart.findFirst({ where: { listId, householdId: membership.householdId, status: "ACTIVE" } }) ??
+      await prisma.cart.create({ data: { listId, householdId: membership.householdId, status: "ACTIVE" } });
+    await prisma.$transaction([
+      prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          listItemId: item.id,
+          masterItemId: item.masterItemId,
+          name: item.name,
+          attributes: { create: resolvedMaster.attributes.map(({ attributeKey, value, valueType }) => ({ attributeKey, value, valueType })) },
+        },
+      }),
+      prisma.shoppingListItem.update({ where: { id: item.id }, data: { status: "IN_CART", checkedAt: new Date() } }),
+    ]);
+  }
   revalidatePath(`/lists/${listId}`);
 }
 
