@@ -137,10 +137,12 @@ function AttributeRows({
 
 export default async function ListDetailPage({
   params,
-}: { params: Promise<{ id: string }> }) {
+  searchParams,
+}: { params: Promise<{ id: string }>; searchParams: Promise<{ highlightCartItem?: string }> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { id } = await params;
+  const { highlightCartItem } = await searchParams;
   const list = await prisma.shoppingList.findFirst({
     where: { id, household: { members: { some: { userId: session.user.id } } } },
     include: {
@@ -240,7 +242,7 @@ export default async function ListDetailPage({
               <span>IN CART</span><span>{cartItems.length}</span>
             </div>
             {cartItems.map((item) => (
-              <div className="item-block" key={item.id}>
+              <div className={item.id === highlightCartItem ? "item-block cart-item-highlight" : "item-block"} key={item.id}>
                 <OptimisticCartToggle action={uncartItem} listId={id} itemId={item.id} name={item.name} checked>
                   <strong>{item.name}</strong>
                   <ItemMeta attributes={item.attributes} />

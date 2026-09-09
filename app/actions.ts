@@ -69,10 +69,11 @@ export async function addListItem(formData: FormData) {
       attributes: { create: resolvedMaster.attributes.map((attribute) => ({ attributeKey: attribute.attributeKey, value: attribute.value, valueType: attribute.valueType })) },
     },
   });
+  let cartItemId: string | null = null;
   if (addToCart) {
     const cart = await prisma.cart.findFirst({ where: { listId, householdId: membership.householdId, status: "ACTIVE" } }) ??
       await prisma.cart.create({ data: { listId, householdId: membership.householdId, status: "ACTIVE" } });
-    await prisma.$transaction([
+    const [cartItem] = await prisma.$transaction([
       prisma.cartItem.create({
         data: {
           cartId: cart.id,
@@ -84,8 +85,10 @@ export async function addListItem(formData: FormData) {
       }),
       prisma.shoppingListItem.update({ where: { id: item.id }, data: { status: "IN_CART", checkedAt: new Date() } }),
     ]);
+    cartItemId = cartItem.id;
   }
   revalidatePath(`/lists/${listId}`);
+  return { itemId: item.id, cartItemId };
 }
 
 export async function addMasterItemsToList(formData: FormData) {

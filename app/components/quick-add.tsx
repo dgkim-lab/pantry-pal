@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import AddIcon from "@mui/icons-material/Add";
 import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
 import {
@@ -20,6 +21,8 @@ import { BarcodeScanner } from "@/app/components/barcode-scanner";
 type MasterItem = { id: string; name: string };
 
 export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[] }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [name, setName] = useState("");
@@ -41,10 +44,21 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
     setScannerOpen(false);
   }
 
-  async function submit(formData: FormData) {
+  function clearHighlight() {
+    document.querySelectorAll<HTMLElement>(".cart-item-highlight").forEach((element) => element.classList.remove("cart-item-highlight"));
+    if (window.location.search.includes("highlightCartItem")) router.replace(pathname);
+    setScannerOpen(true);
+  }
+
+  async function addCatalogItem(formData: FormData): Promise<void> {
     await addListItem(formData);
+  }
+
+  async function submit(formData: FormData) {
+    const result = await addListItem(formData);
     setName("");
     setBarcode("");
+    if (result?.cartItemId) router.replace(`${pathname}?highlightCartItem=${encodeURIComponent(result.cartItemId)}`);
   }
 
   return (
@@ -56,7 +70,7 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
         <IconButton type="button" color="secondary" aria-label="Choose an item from the catalog" onClick={() => setOpen(true)}>
           <AddIcon />
         </IconButton>
-        <IconButton type="button" color="secondary" aria-label="Scan a barcode" onClick={() => setScannerOpen(true)}>
+        <IconButton type="button" color="secondary" aria-label="Scan a barcode" onClick={clearHighlight}>
           <QrCodeScannerIcon />
         </IconButton>
         <TextField
@@ -85,7 +99,7 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
           />
           <List sx={{ overflowY: "auto" }}>
             {filteredItems.map((item) => (
-              <form action={addListItem} key={item.id}>
+              <form action={addCatalogItem} key={item.id}>
                 <input type="hidden" name="listId" value={listId} />
                 <input type="hidden" name="name" value={item.name} />
                 <ListItemButton component="button" type="submit" onClick={close} sx={{ width: "100%", textAlign: "left" }}>

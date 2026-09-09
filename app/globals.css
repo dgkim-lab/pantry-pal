@@ -74,6 +74,8 @@ details summary { cursor:pointer; color:var(--green); font-size:13px; font-weigh
 .item-row { transition:background .2s ease, opacity .2s ease, transform .2s ease; }
 .item-copy { transition:opacity .2s ease; }
 .item-pending-label { color:var(--orange) !important; font-size:11px !important; }
+@keyframes cart-item-highlight { from { background-color:#fff0e8; box-shadow:inset 4px 0 var(--orange); } to { background-color:transparent; box-shadow:inset 0 0 transparent; } }
+.cart-item-highlight { animation:cart-item-highlight 5s ease-out both; border-radius:10px; }
 
 .item-edit-divider { border:0; border-top:1px solid var(--line); margin:18px 0 10px; }
 .single-column { grid-template-columns:1fr; }
