@@ -9,20 +9,46 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
+  Switch,
   Typography,
 } from "@mui/material";
+
+const AUTO_ADD_STORAGE_KEY = "pantry-pal:barcode-auto-add";
 
 type BarcodeScannerProps = {
   open: boolean;
   onClose: () => void;
-  onDetected: (value: string) => void;
+  onDetected: (value: string, automaticAdd: boolean) => void;
 };
 
 export function BarcodeScanner({ open, onClose, onDetected }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const detectedRef = useRef(false);
+  const automaticAddRef = useRef(false);
   const [error, setError] = useState("");
   const [startAttempt, setStartAttempt] = useState(0);
+  const [automaticAdd, setAutomaticAdd] = useState(false);
+
+  useEffect(() => {
+    try {
+      const enabled = window.localStorage.getItem(AUTO_ADD_STORAGE_KEY) === "true";
+      automaticAddRef.current = enabled;
+      setAutomaticAdd(enabled);
+    } catch {
+      // Local storage may be unavailable in private browsing or restricted contexts.
+    }
+  }, []);
+
+  function handleAutomaticAddChange(enabled: boolean) {
+    automaticAddRef.current = enabled;
+    setAutomaticAdd(enabled);
+    try {
+      window.localStorage.setItem(AUTO_ADD_STORAGE_KEY, String(enabled));
+    } catch {
+      // Scanning remains usable when local storage is unavailable.
+    }
+  }
 
   useEffect(() => {
     if (!open) {
@@ -57,7 +83,7 @@ export function BarcodeScanner({ open, onClose, onDetected }: BarcodeScannerProp
         const nextControls = await reader.decodeFromStream(stream, preview, (result) => {
           if (!result || cancelled || detectedRef.current) return;
           detectedRef.current = true;
-          onDetected(result.getText());
+          onDetected(result.getText(), automaticAddRef.current);
         });
         if (cancelled) nextControls.stop();
         else controls = nextControls;
@@ -93,6 +119,11 @@ export function BarcodeScanner({ open, onClose, onDetected }: BarcodeScannerProp
             Center the barcode in the frame. Scanning happens on this device.
           </Typography>
         )}
+        <FormControlLabel
+          control={<Switch checked={automaticAdd} onChange={(event) => handleAutomaticAddChange(event.target.checked)} />}
+          label="Automatically add after scanning"
+          sx={{ mt: 1 }}
+        />
       </DialogContent>
       <DialogActions>
         <Button onClick={() => { setError(""); setStartAttempt((attempt) => attempt + 1); }}>

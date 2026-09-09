@@ -38,10 +38,24 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
     setQuery("");
   }
 
-  function handleBarcode(value: string) {
+  async function handleBarcode(value: string, automaticAdd: boolean) {
     setBarcode(value);
     setName(value);
+    if (!automaticAdd) {
+      setScannerOpen(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("listId", listId);
+    formData.set("name", value);
+    formData.set("barcode", value);
+    formData.set("addToCart", "true");
+    const result = await addListItem(formData);
+    setName("");
+    setBarcode("");
     setScannerOpen(false);
+    if (result?.cartItemId) router.replace(`${pathname}?highlightCartItem=${encodeURIComponent(result.cartItemId)}`);
   }
 
   function clearHighlight() {
