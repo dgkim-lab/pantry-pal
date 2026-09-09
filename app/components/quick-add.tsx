@@ -6,6 +6,10 @@ import AddIcon from "@mui/icons-material/Add";
 import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
 import {
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Drawer,
   IconButton,
   List,
@@ -13,12 +17,18 @@ import {
   ListItemText,
   Stack,
   TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   Typography,
 } from "@mui/material";
-import { addListItem } from "@/app/actions";
+import { addListItem, registerMasterItem } from "@/app/actions";
 import { BarcodeScanner } from "@/app/components/barcode-scanner";
 
 type MasterItem = { id: string; name: string };
+type PendingMaster = { barcode: string; name: string; attributes: { attributeKey: string; value: string; valueType: "TEXT" | "NUMBER" | "BOOLEAN" }[]; found: boolean };
 
 export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[] }) {
   const pathname = usePathname();
@@ -28,6 +38,9 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
   const [name, setName] = useState("");
   const [barcode, setBarcode] = useState("");
   const [query, setQuery] = useState("");
+  const [pendingMaster, setPendingMaster] = useState<PendingMaster | null>(null);
+  const [masterName, setMasterName] = useState("");
+  const [toast, setToast] = useState<{ message: string; found: boolean } | null>(null);
   const filteredItems = useMemo(
     () => items.filter((item) => item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())),
     [items, query],
@@ -36,6 +49,24 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
   function close() {
     setOpen(false);
     setQuery("");
+  }
+
+  function showToast(found: boolean) {
+    setToast({ message: found ? "Product found in Open Food Facts" : "Product not found in Open Food Facts", found });
+    window.setTimeout(() => setToast(null), 3200);
+  }
+
+  async function processAddResult(result: Awaited<ReturnType<typeof addListItem>>) {
+    if (result?.needsMaster) {
+      setPendingMaster({ barcode: result.barcode, name: result.product.name, attributes: result.product.attributes, found: result.product.found });
+      setMasterName(result.product.name);
+      showToast(result.product.found);
+      return;
+    }
+    if (result?.openFoodFactsFound !== undefined) showToast(result.openFoodFactsFound);
+    setName("");
+    setBarcode("");
+    if (result?.cartItemId) router.replace(`${pathname}?highlightCartItem=${encodeURIComponent(result.cartItemId)}`);
   }
 
   async function handleBarcode(value: string, automaticAdd: boolean) {
@@ -51,11 +82,8 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
     formData.set("name", value);
     formData.set("barcode", value);
     formData.set("addToCart", "true");
-    const result = await addListItem(formData);
-    setName("");
-    setBarcode("");
     setScannerOpen(false);
-    if (result?.cartItemId) router.replace(`${pathname}?highlightCartItem=${encodeURIComponent(result.cartItemId)}`);
+    await processAddResult(await addListItem(formData));
   }
 
   function clearHighlight() {
@@ -69,10 +97,27 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
   }
 
   async function submit(formData: FormData) {
-    const result = await addListItem(formData);
-    setName("");
-    setBarcode("");
-    if (result?.cartItemId) router.replace(`${pathname}?highlightCartItem=${encodeURIComponent(result.cartItemId)}`);
+    await processAddResult(await addListItem(formData));
+  }
+
+  async function submitMaster() {
+    if (!pendingMaster || !masterName.trim()) return;
+    const formData = new FormData();
+    formData.set("listId", listId);
+    formData.set("barcode", pendingMaster.barcode);
+    formData.set("name", masterName);
+    formData.set("attributes", JSON.stringify(pendingMaster.attributes));
+    const result = await registerMasterItem(formData);
+    setPendingMaster(null);
+    if (result?.masterItemId) {
+      const addFormData = new FormData();
+      addFormData.set("listId", listId);
+      addFormData.set("name", masterName);
+      addFormData.set("barcode", pendingMaster.barcode);
+      addFormData.set("masterItemId", result.masterItemId);
+      addFormData.set("addToCart", "true");
+      await processAddResult(await addListItem(addFormData));
+    }
   }
 
   return (
@@ -128,6 +173,45 @@ export function QuickAdd({ listId, items }: { listId: string; items: MasterItem[
         </Stack>
       </Drawer>
       <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onDetected={handleBarcode} />
+      <Dialog open={Boolean(pendingMaster)} onClose={() => setPendingMaster(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Register master item</DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            {pendingMaster?.found ? "We found product information in Open Food Facts. Confirm the item name to save it." : "This product was not found in Open Food Facts. Enter a name to save it."}
+          </Typography>
+          <Table size="small" sx={{ mb: 2 }} aria-label="Product attributes">
+            <TableHead>
+              <TableRow>
+                <TableCell>Attribute</TableCell>
+                <TableCell>Value</TableCell>
+                <TableCell>Type</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pendingMaster?.attributes.map((attribute) => (
+                <TableRow key={attribute.attributeKey}>
+                  <TableCell>{attribute.attributeKey}</TableCell>
+                  <TableCell sx={{ overflowWrap: "anywhere" }}>{attribute.value}</TableCell>
+                  <TableCell>{attribute.valueType}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TextField
+            autoFocus
+            fullWidth
+            required
+            label="Item name"
+            value={masterName}
+            onChange={(event) => setMasterName(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingMaster(null)}>Cancel</Button>
+          <Button variant="contained" onClick={() => void submitMaster()} disabled={!masterName.trim()}>Register and add</Button>
+        </DialogActions>
+      </Dialog>
+      {toast && <div className={`catalog-toast ${toast.found ? "catalog-toast-found" : "catalog-toast-missing"}`} role="status">{toast.message}</div>}
     </>
   );
 }

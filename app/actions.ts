@@ -10,6 +10,42 @@ import { publishPrintMessage, publishReceiptMessage } from "@/lib/receipt-queue"
 
 type ItemAttribute = { attributeKey: string; value: string; valueType: "TEXT" | "NUMBER" | "BOOLEAN" };
 
+type OpenFoodFactsProduct = Record<string, unknown>;
+
+function defaultMasterAttributes(): ItemAttribute[] {
+  return [
+    { attributeKey: "defaultQuantity", value: "1", valueType: "NUMBER" },
+    { attributeKey: "currency", value: process.env.DEFAULT_CURRENCY || "KRW", valueType: "TEXT" },
+  ];
+}
+
+async function lookupOpenFoodFacts(barcode: string): Promise<{ found: boolean; name: string; attributes: ItemAttribute[] }> {
+  try {
+    const fields = "product_name,brands,quantity,categories,countries,generic_name,ingredients_text,nutriscore_grade,nova_group,ecoscore_grade,image_front_url";
+    const response = await fetch(`https://world.openfoodfacts.org/api/v3/product/${encodeURIComponent(barcode)}?product_type=all&fields=${fields}`, {
+      cache: "no-store",
+      headers: { "User-Agent": "PantryPal/0.3.1 (barcode lookup)" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return { found: false, name: "", attributes: [{ attributeKey: "barcode", value: barcode, valueType: "TEXT" }] };
+    const body = await response.json() as { product?: OpenFoodFactsProduct; status?: number | string };
+    if (!body.product || body.status === 0 || body.status === "failure") {
+      return { found: false, name: "", attributes: [{ attributeKey: "barcode", value: barcode, valueType: "TEXT" }] };
+    }
+    const product = body.product;
+    const attributes: ItemAttribute[] = [{ attributeKey: "barcode", value: barcode, valueType: "TEXT" }];
+    for (const [key, rawValue] of Object.entries(product)) {
+      if (key === "product_name" || rawValue === null || rawValue === undefined) continue;
+      const value = Array.isArray(rawValue) ? rawValue.join(", ") : typeof rawValue === "string" ? rawValue.trim() : String(rawValue);
+      if (value) attributes.push({ attributeKey: key, value: value.slice(0, 1000), valueType: typeof rawValue === "number" ? "NUMBER" : "TEXT" });
+    }
+    const name = typeof product.product_name === "string" ? product.product_name.trim() : "";
+    return { found: Boolean(name || attributes.length > 1), name, attributes };
+  } catch {
+    return { found: false, name: "", attributes: [{ attributeKey: "barcode", value: barcode, valueType: "TEXT" }] };
+  }
+}
+
 function purchaseAttributes(attributes: readonly ItemAttribute[]) {
   const priceAttributes = attributes.filter((attribute) => ["actualPrice", "actual_price", "actualprice", "expectedPrice", "expected_price", "expectedprice"].includes(attribute.attributeKey));
   const actualPrice = priceAttributes.find((attribute) => ["actualPrice", "actual_price", "actualprice"].includes(attribute.attributeKey));
@@ -35,14 +71,22 @@ export async function addListItem(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
   const barcode = String(formData.get("barcode") ?? "").trim().slice(0, 128);
+  const masterItemId = optionalValue(formData, "masterItemId");
   const addToCart = formData.get("addToCart") === "true";
   const membership = await getMembership(listId);
   if (membership.role === "VIEWER") throw new Error("Viewers cannot edit lists");
 
   const normalizedName = name.toLocaleLowerCase().replace(/\s+/g, " ");
-  const master = barcode
+  const master = masterItemId
+    ? await prisma.masterItem.findFirst({ where: { id: masterItemId, householdId: membership.householdId }, include: { attributes: true } })
+    : barcode
     ? await prisma.masterItem.findFirst({ where: { householdId: membership.householdId, attributes: { some: { attributeKey: "barcode", value: barcode } } }, include: { attributes: true } })
     : null;
+  if (masterItemId && !master) throw new Error("Catalog item not found");
+  if (barcode && !master) {
+    const product = await lookupOpenFoodFacts(barcode);
+    return { needsMaster: true, barcode, product };
+  }
   const nameMaster = master ?? await prisma.masterItem.findFirst({ where: { householdId: membership.householdId, normalizedName }, include: { attributes: true } });
   const resolvedMaster = nameMaster ?? await prisma.masterItem.create({
     data: {
@@ -50,7 +94,12 @@ export async function addListItem(formData: FormData) {
       createdById: membership.userId,
       name,
       normalizedName,
-      ...(barcode ? { attributes: { create: { attributeKey: "barcode", value: barcode, valueType: "TEXT" } } } : {}),
+      attributes: {
+        create: [
+          ...defaultMasterAttributes(),
+          ...(barcode ? [{ attributeKey: "barcode", value: barcode, valueType: "TEXT" as const }] : []),
+        ],
+      },
     },
     include: { attributes: true },
   });
@@ -96,7 +145,44 @@ export async function addListItem(formData: FormData) {
     cartItemId = cartItem.id;
   }
   revalidatePath(`/lists/${listId}`);
-  return { itemId: item.id, cartItemId };
+  const openFoodFacts = barcode ? await lookupOpenFoodFacts(barcode) : null;
+  return { itemId: item.id, cartItemId, openFoodFactsFound: openFoodFacts?.found };
+}
+
+export async function registerMasterItem(formData: FormData) {
+  const listId = String(formData.get("listId") ?? "");
+  const barcode = String(formData.get("barcode") ?? "").trim().slice(0, 128);
+  const name = String(formData.get("name") ?? "").trim();
+  if (!listId || !barcode || !name) return;
+  const membership = await getMembership(listId);
+  if (membership.role === "VIEWER") throw new Error("Viewers cannot edit catalog items");
+  const existing = await prisma.masterItem.findFirst({ where: { householdId: membership.householdId, attributes: { some: { attributeKey: "barcode", value: barcode } } } });
+  if (existing) return { masterItemId: existing.id };
+  let attributes: ItemAttribute[] = [{ attributeKey: "barcode", value: barcode, valueType: "TEXT" }];
+  try {
+    const parsed = JSON.parse(String(formData.get("attributes") ?? "[]")) as ItemAttribute[];
+    attributes = parsed.filter((attribute) => attribute && attribute.attributeKey && attribute.value).map((attribute) => ({
+      attributeKey: attributeKey(attribute.attributeKey), value: String(attribute.value).slice(0, 1000), valueType: attributeType(attribute.valueType),
+    }));
+    if (!attributes.some((attribute) => attribute.attributeKey === "barcode")) attributes.unshift({ attributeKey: "barcode", value: barcode, valueType: "TEXT" });
+  } catch {
+    // Always retain the barcode even if client-provided attribute data is invalid.
+  }
+  for (const defaultAttribute of defaultMasterAttributes()) {
+    if (!attributes.some((attribute) => attribute.attributeKey === defaultAttribute.attributeKey)) attributes.push(defaultAttribute);
+  }
+  const item = await prisma.masterItem.create({
+    data: {
+      householdId: membership.householdId,
+      createdById: membership.userId,
+      name,
+      normalizedName: name.toLocaleLowerCase().replace(/\s+/g, " "),
+      attributes: { create: attributes },
+    },
+    select: { id: true },
+  });
+  revalidatePath("/catalog");
+  return { masterItemId: item.id };
 }
 
 export async function addMasterItemsToList(formData: FormData) {
@@ -492,10 +578,7 @@ export async function saveMasterItem(formData: FormData) {
   const item = masterItemId ? await prisma.masterItem.updateMany({ where: { id: masterItemId, householdId: membership.householdId }, data }).then(async (result) => { if (!result.count) throw new Error("Catalog item not found"); return prisma.masterItem.findUniqueOrThrow({ where: { id: masterItemId } }); }) : await prisma.masterItem.create({ data: { ...data, householdId: membership.householdId, createdById: membership.userId } });
   if (!masterItemId) {
     await prisma.masterItemAttribute.createMany({
-      data: [
-        { masterItemId: item.id, attributeKey: "defaultQuantity", value: "1", valueType: "NUMBER" },
-        { masterItemId: item.id, attributeKey: "currency", value: process.env.DEFAULT_CURRENCY || "KRW", valueType: "TEXT" },
-      ],
+      data: defaultMasterAttributes().map((attribute) => ({ masterItemId: item.id, ...attribute })),
     });
   }
   revalidatePath("/catalog");
